@@ -78,6 +78,19 @@ class TelaCadastro extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
+            TextFormField(
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Confirmar senha',
+                labelStyle: TextStyle(color: Colors.white70),
+                border: OutlineInputBorder(),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
             RichText(
               text: TextSpan(
                 style: const TextStyle(
