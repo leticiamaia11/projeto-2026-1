@@ -30,22 +30,24 @@ class TelaSplash extends StatelessWidget {
             const SizedBox(height: 16),
 
             const SizedBox(height: 32),
+
             ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const TelaCadastro()),
-                );
-              },
-              child: const Text(
-                'Criar conta',
-                style: TextStyle(color: Color(0xFF000000), fontSize: 24),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFB7E0EF),
-                minimumSize: const Size(200, 48),
-              ),
-            ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TelaCadastro()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(200, 48), // Largura fixa ou controlada pelo SizedBox pai
+                    backgroundColor: const Color(0xFFD9D9D9),
+                    shape: const StadiumBorder(), // Deixa o botão com bordas arredondadas
+                  ),
+                  child: const Text(
+                    'Criar conta',
+                    style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                  ),
+                ),
 
             RichText(
               text: TextSpan(
@@ -55,7 +57,7 @@ class TelaSplash extends StatelessWidget {
                   TextSpan(
                     text: 'Faça Login',
                     style: const TextStyle(
-                      color: Color(0xFFFFFFFFF),
+                      color: Color(0xFFB7E0EF),
                       fontWeight: FontWeight.bold,
                       decoration: TextDecoration.none,
                     ),

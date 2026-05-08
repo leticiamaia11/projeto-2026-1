@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-
 import 'package:projeto_integrador/tela_principal.dart';
 
 class TelaLogin extends StatelessWidget {
@@ -8,92 +7,100 @@ class TelaLogin extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final estiloBorda = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30.0),
+      borderSide: BorderSide.none,
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
-
       appBar: AppBar(
-        title: const Text('Fazer Login'),
+        centerTitle: true,
+        title: const Text(
+          'Fazer Login',
+          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context); // Voltar para a tela anterior (TelaSplash)
-          },
+          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1E40AF)),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-
-            TextFormField(
-              keyboardType:
-                  TextInputType.number, // Para exibir o teclado numérico
-              decoration: InputDecoration(
-                labelText: 'CNPJ',
-                hintText: '00.000.000/0000-00',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              obscureText: true, // Para ocultar a senha
-              decoration: const InputDecoration(
-                labelText: 'Senha',
-                border: OutlineInputBorder(),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            RichText(
-              text: TextSpan(
-                style: const TextStyle(
-                  color: Color.fromARGB(195, 0, 0, 0),
-                  fontSize: 16,
-                ),
-                children: [
-                  const TextSpan(text: 'Esqueceu a senha? '),
-                  TextSpan(
-                    text: 'Clique aqui',
-                    style: const TextStyle(
-                      color: Color(0x00000000),
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.none,
-                    ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const TelaLogin(),
-                          ), // Substitua por TelaRecuperacaoSenha() quando implementada
-                        );
-                      },
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: SizedBox(
+            width: 350,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildTextField('CNPJ', estiloBorda, hint: '00.000.000/0000-00', keyboardType: TextInputType.number),
+                const SizedBox(height: 16),
+                _buildTextField('Senha', estiloBorda, obscure: true),
+                const SizedBox(height: 24),
+                RichText(
+                  text: TextSpan(
+                    style: const TextStyle(color: Colors.black87, fontSize: 16),
+                    children: [
+                      const TextSpan(text: 'Esqueceu a senha? '),
+                      TextSpan(
+                        text: 'Clique aqui',
+                        style: const TextStyle(
+                          color: Color(0xFF1E40AF),
+                          fontWeight: FontWeight.bold,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            // Lógica de recuperação
+                          },
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TelaPrincipal()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(200, 48),
+                    backgroundColor: const Color(0xFFD9D9D9),
+                    shape: const StadiumBorder(),
+                  ),
+                  child: const Text(
+                    'Entrar',
+                    style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             ),
+          ),
+        ), // Fechamento do SingleChildScrollView
+      ), // Fechamento do Center
+    ); // Fechamento do Scaffold
+  } // Fechamento do Build
+} // Fechamento da Classe
 
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const TelaPrincipal()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-              ),
-              child: const Text('Entrar'),
-            ),
-          ],
-        ),
+// Função auxiliar (Fica fora da classe)
+Widget _buildTextField(String label, OutlineInputBorder border, {bool obscure = false, String? hint, TextInputType? keyboardType}) {
+  return TextFormField(
+    obscureText: obscure,
+    keyboardType: keyboardType,
+    decoration: InputDecoration(
+      labelText: label,
+      hintText: hint,
+      filled: true,
+      fillColor: const Color(0xFFE5E7EB),
+      border: border,
+      enabledBorder: border,
+      focusedBorder: border.copyWith(
+        borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1),
       ),
-    );
-  }
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    ),
+  );
 }
