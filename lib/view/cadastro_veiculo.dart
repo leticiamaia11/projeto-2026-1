@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-// Importe o pacote de máscaras (adicione no pubspec.yaml: mask_text_input_formatter: ^2.5.0)
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:projeto_integrador/models/veiculo.dart';
+import 'package:projeto_integrador/controllers/veículo_controller.dart';
+import 'package:projeto_integrador/view/lista_veiulos.dart';
+import 'package:projeto_integrador/view/lista_veiulos.dart';
 // Importe os arquivos da sua colega
 // import 'package:app_engetec/controllers/veiculo_controller.dart';
 // Importe sua tela principal/lista
@@ -18,7 +21,7 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
   final _formKey = GlobalKey<FormState>();
 
   // Instância do Controller da sua colega
-  // final _veiculoCtrl = VeiculoController();
+  final _veiculoCtrl = VeiculoController();
 
   // Controllers para capturar os dados da tela
   final _modeloCtrl = TextEditingController();
@@ -51,18 +54,17 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
     // 1. Valida o formulário visualmente (chama os validators dos campos)
     if (_formKey.currentState!.validate()) {
       // 2. Se visualmente estiver ok, chama a lógica complexa da colega
-      /*
+      
       bool sucesso = _veiculoCtrl.processarCadastro(
         modelo: _modeloCtrl.text,
         placa: _placaCtrl.text,
         ano: _anoCtrl.text, // O controller dela trata o opcional
         proprietario: _proprietarioCtrl.text,
       );
-      */
 
       // SIMULAÇÃO (Remova quando conectar o controller dela)
-      bool sucesso = true;
-      print("Placa formatada: ${mascaraPlaca.getMaskedText().toUpperCase()}");
+      // bool sucesso = true;
+      //print("Placa formatada: ${mascaraPlaca.getMaskedText().toUpperCase()}");
 
       if (sucesso) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -74,7 +76,7 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
         // UX: Volta para a lista de veículos
         Navigator.pop(context);
       } else {
-        // Se a lógica dela falhar (ex: placa duplicada)
+        // Se a lógica falhar (ex: placa duplicada)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Erro: Esta placa já existe no sistema.'),
@@ -87,7 +89,7 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
 
   @override
   Widget build(BuildContext context) {
-    // Mantendo o estilo de borda que você definiu
+    // Mantendo o estilo de borda definida
     final estiloBorda = OutlineInputBorder(
       borderRadius: BorderRadius.circular(30.0),
       borderSide: BorderSide.none,
@@ -98,7 +100,7 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
       appBar: AppBar(
         centerTitle: true,
         title: const Text(
-          'Cadastrar Veículo', // Título alterado
+          'Registrar Veículo', 
           style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
@@ -113,7 +115,7 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
           padding: const EdgeInsets.all(24),
           child: SizedBox(
             width: 350,
-            // Importante: Envolver a coluna com o Widget Form
+            // Envolver a coluna com o Widget Form
             child: Form(
               key: _formKey,
               child: Column(
@@ -134,7 +136,7 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
                   ),
                   const SizedBox(height: 16),
 
-                  // CAMPO PLACA (Obrigatório com Validação dela)
+                  // CAMPO PLACA (Obrigatório com Validação)
                   _buildTextField(
                     'Placa',
                     estiloBorda,
@@ -148,12 +150,12 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
                       if (value == null || value.isEmpty) {
                         return 'Informe a placa';
                       }
-                      // UX: Depois chama a validação lógica da sua colega
-                      // return _veiculoCtrl.validarPlaca(value);
+                      // UX: Depois chama a validação lógica 
+                      return _veiculoCtrl.validarPlaca(value);
                       
                       // SIMULAÇÃO (Remova quando conectar o controller dela)
-                      if (value.length != 7) return "Placa inválida (7 caracteres)";
-                      return null;
+                      //if (value.length != 7) return "Placa inválida (7 caracteres)";
+                      //return null;
                     },
                   ),
                   const SizedBox(height: 16),
@@ -173,7 +175,7 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
                   ),
                   const SizedBox(height: 16),
 
-                  // CAMPO ANO (Opcional com Validação dela)
+                  // CAMPO ANO (Opcional com Validação)
                   _buildTextField(
                     'Ano (Opcional)',
                     estiloBorda,
@@ -181,9 +183,8 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
                     hint: 'yyyy',
                     keyboardType: TextInputType.number,
                     validator: (value) {
-                      // UX: Chama a validação opcional da sua colega
-                      // return _veiculoCtrl.validarAno(value);
-                      return null; // Simulação aceita tudo
+                      // UX: Chama a validação opcional 
+                      return _veiculoCtrl.validarAno(value);
                     },
                   ),
                   const SizedBox(height: 16),
@@ -216,7 +217,7 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
                       shape: const StadiumBorder(),
                     ),
                     child: const Text(
-                      'Salvar Veículo', // Texto alterado
+                      'Registrar', 
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -260,6 +261,7 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
         focusedBorder: border.copyWith(
           borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1),
         ),
+
         // Estilo para a mensagem de erro (UX)
         errorStyle: const TextStyle(color: Colors.redAccent),
         focusedErrorBorder: border.copyWith(

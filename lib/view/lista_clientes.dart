@@ -16,6 +16,7 @@ class ListaClientes extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppBar(
+        centerTitle: true,
         title: const Text(
           'Clientes',
           style: TextStyle(

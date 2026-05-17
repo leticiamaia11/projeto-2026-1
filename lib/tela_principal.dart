@@ -2,8 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:projeto_integrador/view/lista_clientes.dart';
-import 'view/cadastro_veiculo.dart';
-import 'view/cadastro_cliente.dart';
+import 'package:projeto_integrador/view/lista_veiulos.dart';
+import 'package:projeto_integrador/view/agendamento.dart';
 
 class TelaPrincipal extends StatefulWidget {
   const TelaPrincipal({super.key});
@@ -153,7 +153,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                   BotaoMenu(
                     label: 'Veículos',
                     icon: Icons.directions_car_filled_outlined,
-                    onTap: () => _navegar(context, const TelaVeiculos()),
+                    onTap: () => _navegar(context, const ListaVeiculos()),
                   ),
                   BotaoMenu(
                     label: 'Agendar',
@@ -231,26 +231,6 @@ class BotaoMenu extends StatelessWidget {
 }
 
 // Telas de exemplo para o teste
-class TelaClientes extends StatelessWidget {
-  const TelaClientes({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      Scaffold(appBar: AppBar(title: const Text("Clientes")));
-}
-
-class TelaVeiculos extends StatelessWidget {
-  const TelaVeiculos({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      Scaffold(appBar: AppBar(title: const Text("Veículos")));
-}
-
-class TelaAgendamento extends StatelessWidget {
-  const TelaAgendamento({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      Scaffold(appBar: AppBar(title: const Text("Agendamento")));
-}
 
 class TelaServicos extends StatelessWidget {
   const TelaServicos({super.key});

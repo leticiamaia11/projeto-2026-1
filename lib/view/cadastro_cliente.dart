@@ -1,17 +1,103 @@
 import 'package:flutter/material.dart';
-import 'package:projeto_integrador/tela_cadastro.dart';
-import 'package:flutter/gestures.dart';
-import 'package:projeto_integrador/tela_principal.dart';
+import 'package:flutter/services.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
-class TelaCadastroCliente extends StatelessWidget {
+// Importando os arquivos com base na estrutura de pastas (views -> controllers/models)
+import '../controllers/cliente_controller.dart';
+import '../controllers/veículo_controller.dart'; // Necessário para inicializar o cliente controller se preciso
+import '../models/cliente.dart';
+
+class TelaCadastroCliente extends StatefulWidget {
   const TelaCadastroCliente({super.key});
+
+  @override
+  State<TelaCadastroCliente> createState() => _TelaCadastroClienteState();
+}
+
+class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
+  // O Grampo da pasta (Chave do formulário)
+  final _formKey = GlobalKey<FormState>();
+
+  // O Gerente da Oficina (Conexão com o Controller da sua colega)
+  // Nota: Como o ClienteController dela pede um VeiculoController no construtor, passamos aqui
+  final ClienteController _clienteCtrl = ClienteController(veiculoController: VeiculoController());
+
+  // As Canetas Mágicas (Controllers para capturar o texto da tela)
+  final _nomeCtrl = TextEditingController();
+  final _cpfCtrl = TextEditingController();
+  final _telefoneCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _enderecoCtrl = TextEditingController();
+  final _observacoesCtrl = TextEditingController();
+
+  // UX: Filtros de Proteção (Máscaras de preenchimento)
+  var mascaraCpf = MaskTextInputFormatter(
+    mask: '###.###.###-##',
+    filter: {"#": RegExp(r'[0-9]')},
+    type: MaskAutoCompletionType.lazy,
+  );
+
+  var mascaraTelefone = MaskTextInputFormatter(
+    mask: '(##) #####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+    type: MaskAutoCompletionType.lazy,
+  );
+
+  @override
+  void dispose() {
+    // Limpando as canetas ao fechar a tela para não pesar a memória
+    _nomeCtrl.dispose();
+    _cpfCtrl.dispose();
+    _telefoneCtrl.dispose();
+    _emailCtrl.dispose();
+    _enderecoCtrl.dispose();
+    _observacoesCtrl.dispose();
+    super.dispose();
+  }
+
+  void _realizarCadastro() {
+    // 1. Validação Visual
+    if (_formKey.currentState!.validate()) {
+      
+      // Pegamos o CPF limpo (sem os pontos e traço da máscara) para mandar para o controller dela
+      String cpfLimpo = mascaraCpf.getUnmaskedText();
+
+      // 2. Chama a lógica oficial da sua colega
+      bool sucesso = _clienteCtrl.processarCadastroCliente(
+        nome: _nomeCtrl.text,
+        cpf: cpfLimpo, // Enviando o CPF tratado
+        telefone: _telefoneCtrl.text,
+        email: _emailCtrl.text,
+        endereco: _enderecoCtrl.text.isEmpty ? null : _enderecoCtrl.text,
+        observacoes: _observacoesCtrl.text.isEmpty ? null : _observacoesCtrl.text,
+      );
+
+      if (sucesso) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cliente cadastrado com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context); // Volta para a lista de clientes
+      } else {
+        // Se cair aqui, é porque a trava de CPF dela foi acionada
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro: Este CPF já está registrado no sistema.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Definimos um estilo padrão para evitar repetir código em todos os campos
+    // Estilo padrão arredondado sem linhas pretas
     final estiloBorda = OutlineInputBorder(
       borderRadius: BorderRadius.circular(30.0),
-      borderSide:
-          BorderSide.none, // Remove a linha para destacar a cor de fundo
+      borderSide: BorderSide.none,
     );
 
     return Scaffold(
@@ -19,11 +105,8 @@ class TelaCadastroCliente extends StatelessWidget {
       appBar: AppBar(
         centerTitle: true,
         title: const Text(
-          'Crie sua conta',
-          style: TextStyle(
-            color: Color(0xFF1E40AF),
-            fontWeight: FontWeight.bold,
-          ),
+          'Registrar Cliente',
+          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -34,98 +117,121 @@ class TelaCadastroCliente extends StatelessWidget {
       ),
 
       body: Center(
-        // Centraliza o conteúdo horizontalmente
         child: SingleChildScrollView(
-          // Permite rolar a tela e evita erro de espaço
           padding: const EdgeInsets.all(24),
           child: SizedBox(
-            width: 350, // Define a largura máxima dos campos e botão
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildTextField('Nome completo', estiloBorda),
-                const SizedBox(height: 16),
-
-                _buildTextField(
-                  'E-mail',
-                  estiloBorda,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 16),
-
-                _buildTextField(
-                  'Telefone',
-                  estiloBorda,
-                  hint: '(00) 00000-0000',
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-
-                _buildTextField('Nome da Oficina', estiloBorda),
-                const SizedBox(height: 16),
-
-                _buildTextField(
-                  'CNPJ',
-                  estiloBorda,
-                  hint: '00.000.000/0000-00',
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-
-                _buildTextField('Senha', estiloBorda, obscure: true),
-                const SizedBox(height: 16),
-
-                _buildTextField('Confirmar senha', estiloBorda, obscure: true),
-                const SizedBox(height: 24),
-
-                RichText(
-                  text: TextSpan(
-                    style: const TextStyle(color: Colors.black54, fontSize: 14),
-                    children: [
-                      const TextSpan(
-                        text: 'Ao criar uma conta, você aceita os ',
-                      ),
-                      TextSpan(
-                        text: 'termos e condições',
-                        style: const TextStyle(
-                          color: Color(0xFF1E40AF),
-                          fontWeight: FontWeight.bold,
-                        ),
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                            // Lógica dos termos
-                          },
-                      ),
-                    ],
+            width: 350, // Mantendo o padrão de largura ideal para mobile/desktop
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // CAMPO NOME (Obrigatório)
+                  _buildTextField(
+                    'Nome Completo',
+                    estiloBorda,
+                    controller: _nomeCtrl,
+                    hint: 'ex: João da Silva',
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor, informe o nome';
+                      }
+                      return null;
+                    },
                   ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const TelaPrincipal()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(
-                      200,
-                      48,
-                    ), // Largura fixa ou controlada pelo SizedBox pai
-                    backgroundColor: const Color(0xFFD9D9D9),
-                    shape:
-                        const StadiumBorder(), // Deixa o botão com bordas arredondadas
+                  // CAMPO CPF (Obrigatório com Máscara)
+                  _buildTextField(
+                    'CPF',
+                    estiloBorda,
+                    controller: _cpfCtrl,
+                    hint: '000.000.000-00',
+                    inputFormatters: [mascaraCpf],
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Informe o CPF';
+                      }
+                      if (mascaraCpf.getUnmaskedText().length != 11) {
+                        return 'O CPF deve ter 11 dígitos';
+                      }
+                      return null;
+                    },
                   ),
-                  child: const Text(
-                    'Criar conta',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(height: 16),
+
+                  // CAMPO TELEFONE (Obrigatório com Máscara)
+                  _buildTextField(
+                    'Telefone',
+                    estiloBorda,
+                    controller: _telefoneCtrl,
+                    hint: '(00) 00000-0000',
+                    inputFormatters: [mascaraTelefone],
+                    keyboardType: TextInputType.phone,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Informe o telefone';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // CAMPO E-MAIL (Obrigatório)
+                  _buildTextField(
+                    'E-mail',
+                    estiloBorda,
+                    controller: _emailCtrl,
+                    hint: 'joao@email.com',
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Informe o e-mail';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Digite um e-mail válido';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // CAMPO ENDEREÇO (Opcional)
+                  _buildTextField(
+                    'Endereço (Opcional)',
+                    estiloBorda,
+                    controller: _enderecoCtrl,
+                    hint: 'Rua, Número, Bairro',
+                  ),
+                  const SizedBox(height: 16),
+
+                  // CAMPO OBSERVAÇÕES (Opcional)
+                  _buildTextField(
+                    'Observações (Opcional)',
+                    estiloBorda,
+                    controller: _observacoesCtrl,
+                    hint: 'ex: Cliente prefere contato via WhatsApp',
+                    maxLines: 3,
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // BOTÃO SALVAR
+                  ElevatedButton(
+                    onPressed: _realizarCadastro,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(200, 48),
+                      backgroundColor: const Color(0xFF1E40AF), // Azul Identidade Engetec
+                      shape: const StadiumBorder(),
+                    ),
+                    child: const Text(
+                      'Salvar Cliente',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -133,31 +239,36 @@ class TelaCadastroCliente extends StatelessWidget {
     );
   }
 
-  // Função auxiliar para não repetir código de TextFormField
+  // Função auxiliar idêntica à de veículo para reuso de design
   Widget _buildTextField(
     String label,
     OutlineInputBorder border, {
-    bool obscure = false,
+    TextEditingController? controller,
+    FormFieldValidator<String>? validator,
+    List<dynamic>? inputFormatters,
     String? hint,
     TextInputType? keyboardType,
+    int maxLines = 1,
   }) {
     return TextFormField(
-      obscureText: obscure,
+      controller: controller,
+      validator: validator,
+      inputFormatters: inputFormatters?.cast<TextInputFormatter>(),
       keyboardType: keyboardType,
+      maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
+        alignLabelWithHint: true,
         hintText: hint,
         filled: true,
-        fillColor: const Color(0xFFE5E7EB), // Cor de fundo cinza clara
+        fillColor: const Color(0xFFE5E7EB), // Cinza claro padrão
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(
           borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1),
         ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
-        ),
+        errorStyle: const TextStyle(color: Colors.redAccent),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       ),
     );
   }
