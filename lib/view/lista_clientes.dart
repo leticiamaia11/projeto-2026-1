@@ -2,17 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:projeto_integrador/view/cadastro_cliente.dart';
 import 'package:projeto_integrador/view/perfil_cliente.dart';
 
-class ListaClientes extends StatelessWidget {
+class ListaClientes extends StatefulWidget {
   const ListaClientes({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Exemplo de lista de usuários (isso pode ficar aqui dentro sem problemas por enquanto)
-    final List<Map<String, String>> clientes = [
-      {'nome': 'Leticia Maia', 'veiculo': 'Honda Civic - ABC1234'},
-      {'nome': 'Emily Sabrina', 'veiculo': 'Fiat Argo - DEF5678'},
-    ];
+  State<ListaClientes> createState() => _ListaClientesState();
+}
 
+class _ListaClientesState extends State<ListaClientes> {
+  // Exemplo de lista de usuários (isso pode ficar aqui dentro sem problemas por enquanto)
+  final List<Map<String, String>> todosClientes = [
+    {'nome': 'Leticia Maia', 'veiculo': 'Honda Civic - ABC1234'},
+    {'nome': 'Emily Sabrina', 'veiculo': 'Fiat Argo - DEF5678'},
+  ];
+
+  late List<Map<String, String>> clientesFiltrados;
+
+  @override
+  void initState() {
+    super.initState();
+    clientesFiltrados = todosClientes; // Inicialmente mostra todos
+  }
+
+  void _filtrarClientes(String query) {
+    setState(() {
+      clientesFiltrados = todosClientes
+          .where(
+            (cliente) =>
+                cliente['nome']!.toLowerCase().contains(query.toLowerCase()) ||
+                cliente['veiculo']!.toLowerCase().contains(query.toLowerCase()),
+          )
+          .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppBar(
@@ -37,6 +62,7 @@ class ListaClientes extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
+              onChanged: (value) => _filtrarClientes(value),
               decoration: InputDecoration(
                 hintText: 'Buscar cliente...',
                 prefixIcon: const Icon(Icons.search),
@@ -52,9 +78,9 @@ class ListaClientes extends StatelessWidget {
 
           Expanded(
             child: ListView.builder(
-              itemCount: clientes.length,
+              itemCount: clientesFiltrados.length,
               itemBuilder: (context, index) {
-                final cliente = clientes[index];
+                final cliente = clientesFiltrados[index];
                 return Card(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 16,

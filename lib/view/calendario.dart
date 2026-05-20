@@ -2,25 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:projeto_integrador/view/agendamento.dart';
 
-class Calendario extends StatefulWidget {
-  const Calendario({super.key});
+class TelaCalendario extends StatefulWidget {
+  const TelaCalendario({super.key});
 
   @override
-  State<Calendario> createState() => _CalendarioState();
+  State<TelaCalendario> createState() => _TelaCalendarioState();
 }
 
-class _CalendarioState extends State<Calendario> {
+class _TelaCalendarioState extends State<TelaCalendario> {
   DateTime _diaSelecionado = DateTime.now();
   DateTime _focoDia = DateTime.now();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: const Color(0xFFF9FAFC),
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text(
+          'Calendário',
+          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1E40AF)),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
             _buildCalendar(),
             const SizedBox(height: 10),
             Expanded(child: _buildEventList()),
@@ -36,21 +49,6 @@ class _CalendarioState extends State<Calendario> {
         },
         backgroundColor: const Color(0xFF1E40AF),
         child: const Icon(Icons.add, color: Colors.white, size: 30),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            "Calendário",
-            style: TextStyle(color: Colors.grey, fontSize: 16),
-          ),
-        ],
       ),
     );
   }

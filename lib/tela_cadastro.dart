@@ -83,7 +83,7 @@ class TelaCadastro extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const TelaPrincipal()),
+                      MaterialPageRoute(builder: (_) => TelaPrincipal()),
                     );
                   },
                   style: ElevatedButton.styleFrom(

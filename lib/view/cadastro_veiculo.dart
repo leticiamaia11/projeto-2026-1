@@ -4,10 +4,6 @@ import 'package:projeto_integrador/models/veiculo.dart';
 import 'package:projeto_integrador/controllers/veículo_controller.dart';
 import 'package:projeto_integrador/view/lista_veiulos.dart';
 import 'package:projeto_integrador/view/lista_veiulos.dart';
-// Importe os arquivos da sua colega
-// import 'package:app_engetec/controllers/veiculo_controller.dart';
-// Importe sua tela principal/lista
-// import 'package:app_engetec/tela_lista_veiculos.dart';
 
 class TelaCadastroVeiculo extends StatefulWidget {
   const TelaCadastroVeiculo({super.key});
@@ -20,7 +16,7 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
   // Chave global para o formulário (necessária para validação)
   final _formKey = GlobalKey<FormState>();
 
-  // Instância do Controller da sua colega
+  // Instância do Controller que gerencia a lógica de cadastro de veículos
   final _veiculoCtrl = VeiculoController();
 
   // Controllers para capturar os dados da tela
@@ -53,16 +49,16 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
   void _realizarCadastro() {
     // 1. Valida o formulário visualmente (chama os validators dos campos)
     if (_formKey.currentState!.validate()) {
-      // 2. Se visualmente estiver ok, chama a lógica complexa da colega
+      // 2. Se visualmente estiver ok, chama a lógica de cadastro no controller
       
       bool sucesso = _veiculoCtrl.processarCadastro(
         modelo: _modeloCtrl.text,
         placa: _placaCtrl.text,
-        ano: _anoCtrl.text, // O controller dela trata o opcional
+        ano: _anoCtrl.text, // O controller trata o opcional
         proprietario: _proprietarioCtrl.text,
       );
 
-      // SIMULAÇÃO (Remova quando conectar o controller dela)
+      // SIMULAÇÃO (Remova quando conectar o controller)
       // bool sucesso = true;
       //print("Placa formatada: ${mascaraPlaca.getMaskedText().toUpperCase()}");
 
@@ -153,7 +149,7 @@ class _TelaCadastroVeiculoState extends State<TelaCadastroVeiculo> {
                       // UX: Depois chama a validação lógica 
                       return _veiculoCtrl.validarPlaca(value);
                       
-                      // SIMULAÇÃO (Remova quando conectar o controller dela)
+                      // SIMULAÇÃO (Remova quando conectar o controller)
                       //if (value.length != 7) return "Placa inválida (7 caracteres)";
                       //return null;
                     },

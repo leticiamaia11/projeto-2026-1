@@ -4,15 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:projeto_integrador/view/lista_clientes.dart';
 import 'package:projeto_integrador/view/lista_veiulos.dart';
 import 'package:projeto_integrador/view/agendamento.dart';
+import 'package:projeto_integrador/view/servicos.dart';
+import 'package:projeto_integrador/view/relatorio_financeiro.dart';
+import 'package:projeto_integrador/view/historico_servicos.dart';
+import 'package:projeto_integrador/view/calendario.dart';
+import 'package:projeto_integrador/controllers/veículo_controller.dart';
 
 class TelaPrincipal extends StatefulWidget {
-  const TelaPrincipal({super.key});
+   const TelaPrincipal({super.key});
 
   @override
   State<TelaPrincipal> createState() => _TelaPrincipalState();
 }
 
 class _TelaPrincipalState extends State<TelaPrincipal> {
+   final VeiculoController _veiculoCtrl = VeiculoController();
   int indiceSelecionado = 0; //controla qual dia está marcado
   late List<DiaCalendario> listaDias; //lista de datas reais
 
@@ -108,10 +114,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                         final dia = listaDias[index];
                         return GestureDetector(
                           onTap: () {
-                            setState(() {
-                              indiceSelecionado =
-                                  index; //marca o dia selecionado
-                            });
+                            _navegar(context, const TelaCalendario());
                           },
                           child: CardDia(
                             numero: dia.numero,
@@ -130,8 +133,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               padding: EdgeInsets.all(20.0),
               child: Text(
                 'Funcionalidades',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                selectionColor: Color(0xFF1E40AF),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
               ),
             ),
 
@@ -163,7 +165,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                   BotaoMenu(
                     label: 'Serviços',
                     icon: Icons.build_outlined,
-                    onTap: () => _navegar(context, const TelaServicos()),
+                    onTap: () => _navegar(context, TelaServicos(veiculoController: _veiculoCtrl)),
                   ),
                   BotaoMenu(
                     label: 'Relatório',
@@ -231,27 +233,6 @@ class BotaoMenu extends StatelessWidget {
 }
 
 // Telas de exemplo para o teste
-
-class TelaServicos extends StatelessWidget {
-  const TelaServicos({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      Scaffold(appBar: AppBar(title: const Text("Serviços")));
-}
-
-class TelaRelatorio extends StatelessWidget {
-  const TelaRelatorio({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      Scaffold(appBar: AppBar(title: const Text("Relatório")));
-}
-
-class TelaHistorico extends StatelessWidget {
-  const TelaHistorico({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      Scaffold(appBar: AppBar(title: const Text("Histórico")));
-}
 
 class DiaCalendario {
   final String numero;
