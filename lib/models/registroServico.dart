@@ -1,0 +1,45 @@
+class RegistroServico {
+  int? id;
+  String descricao;
+  double valor;
+  DateTime data;
+  String placaVeiculo;
+  bool concluido;
+  int duracaoEmHoras;
+
+  RegistroServico({
+    this.id,
+    required this.descricao,
+    required this.valor,
+    required this.placaVeiculo,
+    required this.duracaoEmHoras,
+    this.concluido = false,
+    DateTime? dataInformada,
+  }) : data = dataInformada ?? DateTime.now();
+  
+  DateTime get horarioTermino => data.add(Duration(hours: duracaoEmHoras));
+
+  factory RegistroServico.fromMap(Map<String, dynamic> map) {
+    return RegistroServico(
+      id: map['id'],
+      descricao: map['descricao'] ?? '',
+      valor: (map['valor'] as num? ?? 0.0).toDouble(),
+      dataInformada: map['data'] != null ? DateTime.parse(map['data']) : null,
+      placaVeiculo: map['placaVeiculo'] ?? '',
+      duracaoEmHoras: map['duracaoEmHoras'] ?? 0,
+      concluido: map['concluido'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      if (id != null) 'id': id,
+      'descricao': descricao,
+      'valor': valor,
+      'data': data.toIso8601String(),
+      'placaVeiculo': placaVeiculo,
+      'duracaoEmHoras': duracaoEmHoras,
+      'concluido': concluido,
+    };
+  }
+}

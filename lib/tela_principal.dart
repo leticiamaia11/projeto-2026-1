@@ -1,6 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:projeto_integrador/controllers/servico_controller.dart';
+import 'package:projeto_integrador/controllers/veículo_controller.dart';
 import 'package:projeto_integrador/view/lista_clientes.dart';
 import 'package:projeto_integrador/view/lista_veiulos.dart';
 import 'package:projeto_integrador/view/agendamento.dart';
@@ -8,7 +10,6 @@ import 'package:projeto_integrador/view/servicos.dart';
 import 'package:projeto_integrador/view/relatorio_financeiro.dart';
 import 'package:projeto_integrador/view/historico_servicos.dart';
 import 'package:projeto_integrador/view/calendario.dart';
-import 'package:projeto_integrador/controllers/veículo_controller.dart';
 
 class TelaPrincipal extends StatefulWidget {
    const TelaPrincipal({super.key});
@@ -18,13 +19,15 @@ class TelaPrincipal extends StatefulWidget {
 }
 
 class _TelaPrincipalState extends State<TelaPrincipal> {
-   final VeiculoController _veiculoCtrl = VeiculoController();
+  final VeiculoController _veiculoCtrl = VeiculoController();
+  late final ServicoController _servicoCtrl;
   int indiceSelecionado = 0; //controla qual dia está marcado
   late List<DiaCalendario> listaDias; //lista de datas reais
 
   @override
   void initState() {
     super.initState();
+    _servicoCtrl = ServicoController(veiculoController: _veiculoCtrl);
     //gera os dias apenas uma vez, quando a tela abre
     listaDias = gerarDias();
   }
@@ -165,12 +168,12 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                   BotaoMenu(
                     label: 'Serviços',
                     icon: Icons.build_outlined,
-                    onTap: () => _navegar(context, TelaServicos(veiculoController: _veiculoCtrl)),
+                    onTap: () => _navegar(context, const TelaServicos()),
                   ),
                   BotaoMenu(
                     label: 'Relatório',
                     icon: Icons.attach_money_outlined,
-                    onTap: () => _navegar(context, const TelaRelatorio()),
+                    onTap: () => _navegar(context, TelaRelatorio(servicoController: _servicoCtrl, veiculoController: _veiculoCtrl)),
                   ),
                   BotaoMenu(
                     label: 'Histórico',

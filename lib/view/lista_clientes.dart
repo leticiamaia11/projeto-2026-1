@@ -115,7 +115,7 @@ class _ListaClientesState extends State<ListaClientes> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const PerfilCliente(),
+                          builder: (_) =>  PerfilCliente(cliente: cliente),
                         ),
                       );
                     },

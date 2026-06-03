@@ -5,9 +5,9 @@ import 'package:projeto_integrador/controllers/veículo_controller.dart';
 import 'package:projeto_integrador/controllers/servico_controller.dart';
 
 class TelaServicos extends StatefulWidget {
-  final VeiculoController veiculoController;
+  //final VeiculoController veiculoController;
 
-  const TelaServicos({super.key, required this.veiculoController});
+  const TelaServicos({super.key});
 
   @override
   State<TelaServicos> createState() => _TelaServicosState();
@@ -35,10 +35,6 @@ class _TelaServicosState extends State<TelaServicos> {
   @override
   void initState() {
     super.initState();
-    // Inicializa o controller de serviços, passando o controller de veículos para que ele possa acessar os dados dos veículos
-    _servicoCtrl = ServicoController(
-      veiculoController: widget.veiculoController,
-    );
   }
 
   @override
@@ -51,42 +47,37 @@ class _TelaServicosState extends State<TelaServicos> {
     super.dispose();
   }
 
-  void _registrarServico() {
+  // Método assíncrono simplificado, apenas aguardando o retorno do controller
+  void _registrarServico() async {
     if (_formKey.currentState!.validate()) {
       // Converte a placa para maiúscula para garantir consistência
       String placaTratada = _placaCtrl.text.toUpperCase().trim();
       double valor = double.parse(_valorCtrl.text.replaceAll(',', '.'));
       int duracao = int.parse(_duracaoCtrl.text);
 
-      // Chamando o método adicionarServico do controller, passando os dados capturados
-      _servicoCtrl.adicionarServico(
+      // Aguarda o controller processar e dizer se deu certo ou não
+      bool sucesso = await _servicoCtrl.adicionarServico(
         placa: placaTratada,
         descricao: _descricaoCtrl.text,
         valor: valor,
         duracao: duracao,
       );
 
-      // Como o controller apenas printa no console em caso de sucesso/erro interno,
-      // buscamos na lista para dar o feedback visual correto ao usuário na View.
-      bool veiculoExiste = widget.veiculoController.listaDeVeiculos.any(
-        (v) => v.placa == placaTratada,
-      );
+      if (!mounted) return;
 
-      if (veiculoExiste) {
+      if (sucesso) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Serviço registrado com sucesso!'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(
-          context,
-        ); // Volta para a tela anterior após registrar o serviço
+        Navigator.pop(context); // Volta para a tela anterior
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Erro: Veículo não encontrado. Verifique a placa e tente novamente.',
+              'Erro: Não foi possível registrar o serviço. Verifique se o veículo está cadastrado.',
             ),
             backgroundColor: Colors.red,
           ),
@@ -97,7 +88,7 @@ class _TelaServicosState extends State<TelaServicos> {
 
   @override
   Widget build(BuildContext context) {
-    // Estilo padrão arredondado sem linhas pretas
+    // Converte a placa para maiúscula para garantir consistência
     final estiloBorda = OutlineInputBorder(
       borderRadius: BorderRadius.circular(30.0),
       borderSide: BorderSide.none,
@@ -126,13 +117,12 @@ class _TelaServicosState extends State<TelaServicos> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: SizedBox(
-            width: 350, // Largura fixa para melhor layout
+            width: 350,
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Campo de Placa
                   _buildTextField(
                     'Placa do Veículo',
                     estiloBorda,
@@ -151,7 +141,6 @@ class _TelaServicosState extends State<TelaServicos> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Campo de Descrição do Serviço
                   _buildTextField(
                     'Descrição do Serviço',
                     estiloBorda,
@@ -167,13 +156,14 @@ class _TelaServicosState extends State<TelaServicos> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Campo de Valor
                   _buildTextField(
                     'Valor do Serviço (R\$)',
                     estiloBorda,
                     controller: _valorCtrl,
                     hint: 'Ex: 199.99',
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
                         RegExp(r'^\d*\.?\d{0,2}'),
@@ -183,11 +173,13 @@ class _TelaServicosState extends State<TelaServicos> {
                       if (value == null || value.isEmpty) {
                         return 'Por favor, insira o valor do serviço';
                       }
-                      if (double.tryParse(value.replaceAll(',', '.')) == null) {
+                      final valorConvertido = double.tryParse(
+                        value.replaceAll(',', '.'),
+                      );
+                      if (valorConvertido == null) {
                         return 'Por favor, insira um valor numérico válido';
                       }
-                      final valorConvertido = double.tryParse(value.replaceAll(',', '.'));
-                      if (valorConvertido == null || valorConvertido <= 0) {
+                      if (valorConvertido <= 0) {
                         return 'O valor do serviço deve ser maior que zero';
                       }
                       return null;
@@ -195,25 +187,22 @@ class _TelaServicosState extends State<TelaServicos> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Campo de Duração
                   _buildTextField(
                     'Duração Estimada (horas)',
                     estiloBorda,
                     controller: _duracaoCtrl,
                     hint: 'Ex: 2',
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Por favor, insira a duração estimada do serviço';
                       }
-                      if (int.tryParse(value) == null) {
-                        return 'Por favor, insira um número inteiro válido para a duração';
-                      }
                       final duracaoConvertida = int.tryParse(value);
-                      if (duracaoConvertida == null || duracaoConvertida <= 0) {
+                      if (duracaoConvertida == null) {
+                        return 'Por favor, insira um número inteiro válido';
+                      }
+                      if (duracaoConvertida <= 0) {
                         return 'A duração do serviço deve ser maior que zero';
                       }
                       return null;
@@ -221,7 +210,7 @@ class _TelaServicosState extends State<TelaServicos> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Botão de Registrar Serviço
+                  // Botão simples apenas com texto estático
                   ElevatedButton(
                     onPressed: _registrarServico,
                     style: ElevatedButton.styleFrom(
@@ -273,14 +262,17 @@ class _TelaServicosState extends State<TelaServicos> {
         alignLabelWithHint: true,
         hintText: hint,
         filled: true,
-        fillColor: const Color(0xFFE5E7EB), // Cinza claro padrão
+        fillColor: const Color(0xFFE5E7EB),
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(
           borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1),
         ),
         errorStyle: const TextStyle(color: Colors.redAccent),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
       ),
     );
   }

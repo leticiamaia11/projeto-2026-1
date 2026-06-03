@@ -179,7 +179,7 @@ class _ListaVeiculosState extends State<ListaVeiculos> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const PerfilCliente(),
+                              builder: (_) =>  PerfilCliente(cliente: veiculo),
                             ),
                           );
                         },

@@ -1,4 +1,4 @@
-import '../models/registro_servico.dart';
+import '../models/registroServico.dart';
 import 'veículo_controller.dart';
 import '../models/veiculo.dart';
 import '../models/gasto.dart';
@@ -199,5 +199,74 @@ class ServicoController {
 
     _historicoGastos.add(novoGasto);
     print("Sucesso: Gasto '$descricao' registrado!");
+  }
+
+  //===============================================================================
+  //                                 AGENDA
+  //===============================================================================
+
+  void agendarServico({
+    required String descricao,
+    required double valor,
+    required String placa,
+    required DateTime dataHora,
+    required int duracao,
+  }) {
+    bool bloqueado = verificarSeEstaBloqueado(dataHora);
+    if (bloqueado) {
+      print("Não foi possível agendar: Este horário já está ocupado!");
+      return;
+    }
+    //criando serviço caso o horário esteja disponível
+    var novoAgendamento = RegistroServico(
+      descricao: descricao,
+      valor: valor,
+      placaVeiculo: placa,
+      duracaoEmHoras: duracao,
+      dataInformada: dataHora,
+      concluido: false,
+    );
+
+    //salvando na lista global
+    _historicoGlobal.add(novoAgendamento);
+    print(
+      "Sucesso: Serviço agendado para ${dataHora}/${dataHora.month} às ${dataHora.hour}:00",
+    );
+  }
+
+  //PROCURAR UM CARRO PELA PLACA
+
+  List<RegistroServico> buscarHistoricoPorPlaca(String placaDigitada) {
+    List<RegistroServico> resultados = [];
+
+    for (var servico in _historicoGlobal) {
+      //se a placa do serviço for correspondente a placa que o usuário procura
+      if (servico.placaVeiculo == placaDigitada) {
+        //guardando o serviço  na lista de resultados
+        resultados.add(servico);
+      }
+    }
+    return resultados;
+  }
+
+  //CALCULAR LUCRO ENTRE DATAS
+  double calcularLucroPorPeriodo(DateTime dataInicio, DateTime dataFim) {
+    double totalEntradas = 0.0;
+    double totalSaidas = 0.0;
+
+    //soma as entradas (serviços) no período
+    for (var servico in _historicoGlobal) {
+      if (servico.data.isAfter(dataInicio) && servico.data.isBefore(dataFim)) {
+        totalEntradas += servico.valor;
+      }
+    }
+
+    //soma as saídas (despesas) no período
+    for (var despesa in _historicoGastos) {
+      if (despesa.data.isAfter(dataInicio) && despesa.data.isBefore(dataFim)) {
+        totalSaidas += despesa.valor;
+      }
+    }
+    return totalEntradas - totalSaidas;
   }
 }

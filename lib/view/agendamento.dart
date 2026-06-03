@@ -37,6 +37,18 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF1E40AF), // Cor azul padrão
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF1E40AF),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (selectedDate != null) {
       setState(() {
@@ -52,6 +64,18 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
     TimeOfDay? horaSelecionada = await showTimePicker(
       context: context,
       initialTime: _horaInicioReal ?? TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF1E40AF), // Cor azul padrão
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF1E40AF),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (horaSelecionada != null) {

@@ -21,7 +21,10 @@ class _TelaCalendarioState extends State<TelaCalendario> {
         centerTitle: true,
         title: const Text(
           'Calendário',
-          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF1E40AF),
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -143,11 +146,13 @@ class _TelaCalendarioState extends State<TelaCalendario> {
             ),
           ),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                hora,
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hora,
                 style: TextStyle(
                   color: cor,
                   fontWeight: FontWeight.bold,
@@ -166,6 +171,7 @@ class _TelaCalendarioState extends State<TelaCalendario> {
                 style: const TextStyle(color: Colors.grey, fontSize: 13),
               ),
             ],
+          ),
           ),
         ],
       ),

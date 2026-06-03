@@ -6,8 +6,9 @@ class VeiculoController {
     return listaDeVeiculos;
   }
 
-  //Lista Alfabética
-
+  //===============================================================================
+  //                            LISTA ALFABÉTICA
+  //===============================================================================
   List<Veiculo> obterVeiculosOrdenados() {
     List<Veiculo> listaOrdenada = List.from(listaDeVeiculos);
     listaOrdenada.sort(
@@ -17,17 +18,19 @@ class VeiculoController {
     return listaOrdenada;
   }
 
-  //Validação da Placa
+  //===============================================================================
+  //                            VALIDAÇÃO DA PLACA
+  //===============================================================================
 
   //verifica se está vazio
   String? validarPlaca(String valor) {
     if (valor.isEmpty) {
       return "A placa não pode ser vazia";
     }
-    //transforma tudo em maiúsculo
+    //tranforma tudo em maiúsculo
     String placaFormatada = valor.toUpperCase();
 
-    //verificar o tamanho (exatamente 7)
+    //Verificar o tamanho (extamente 7)
     if (placaFormatada.length != 7) {
       return "A placa deve conter exatamente 7 caracteres";
     }
@@ -36,13 +39,13 @@ class VeiculoController {
     final regexLetras = RegExp(r'[A-Z]');
     final regexNumeros = RegExp(r'[0-9]');
 
-    //contando quantas letras e números possuem na placa
+    //contando quantas letras e numeros possuem na placa
     int quantidadeLetras = regexLetras.allMatches(placaFormatada).length;
     int quantidadeNumeros = regexNumeros.allMatches(placaFormatada).length;
 
-    //lógica de 3 letras e 4 números
+    //Lógica de 3 letras e 4 números
     if (quantidadeLetras != 3 || quantidadeNumeros != 4) {
-      return "A placa deve conter 3 letras e 4 números";
+      return "Placa inválida";
     }
     return null;
   }
@@ -51,7 +54,7 @@ class VeiculoController {
     return listaDeVeiculos.any((v) => v.placa == placaNova.toUpperCase());
   }
 
-  //busca de um veículo pela placa
+  //Busca de um veículo específico pela placa
   Veiculo? procuraPorPlaca(String placaParaBuscar) {
     try {
       //procura o primeiro veículo que tenha a placa igual à digitada
@@ -59,21 +62,24 @@ class VeiculoController {
         (v) => v.placa == placaParaBuscar.toUpperCase(),
       );
     } catch (e) {
-      return null; // Retorna null se não encontrar o veículo
+      return null;
     }
   }
 
-  //Validação do Ano
+  //===============================================================================
+  //                            VALIDAÇÃO DE ANO
+  //===============================================================================
+
   String? validarAno(String? valor) {
     if (valor == null || valor.isEmpty) {
-      return null; // Permite que o campo seja opcional
+      return null; //opcional, então aceita vazio
     }
 
     //transformar o texto em número
     int? anoConvertido = int.tryParse(valor);
     int anoAtual = DateTime.now().year;
 
-    //se não for m número válido
+    // se não for um número válido
     if (anoConvertido == null) {
       return "Digite um ano válido.";
     }
@@ -84,9 +90,11 @@ class VeiculoController {
     return null;
   }
 
-  //Cadastro de Veículo
+  //===============================================================================
+  //                            CADASTRO DE VEÍCULO
+  //===============================================================================
 
-  //função que o botão da tela vai chamar para cadastrar um veículo
+  //função que o botão da tela vai chamar
   bool processarCadastro({
     required String modelo,
     required String placa,
@@ -97,7 +105,7 @@ class VeiculoController {
     String? erroPlaca = validarPlaca(placa);
     String? erroAno = validarAno(ano);
 
-    //tomada de decisão: se tiver erro, não cadastra
+    // tomada de decisão
     if (erroPlaca != null) {
       print("Erro na lógica: $erroPlaca");
       return false;
@@ -109,7 +117,7 @@ class VeiculoController {
     }
 
     if (placaJaExiste(placa)) {
-      print("Esta placa já está cadastrada no sistema.");
+      print("Esta placa já está cadastrada no sistema!");
       return false;
     }
 
@@ -120,7 +128,7 @@ class VeiculoController {
       modelo: modelo,
       placa: placa.toUpperCase(),
       proprietario: proprietario,
-      ano: int.tryParse(ano ?? ''),
+      ano: int.tryParse(ano ?? ''), //coverte a string da tela para numero
     );
 
     print("Veículo criado com sucesso: ${novoVeiculo.modelo}");
@@ -143,10 +151,10 @@ class VeiculoController {
   }
 
   bool removerVeiculo(String placaParaRemover) {
-    //verifica sse a placa já existe
+    //verifica se a placa já existe
     if (!placaJaExiste(placaParaRemover)) {
       print(
-        "Erro: O veículo com a placa $placaParaRemover não foi encontrado.",
+        "Erro: O veículo com a placa $placaParaRemover não foi encontrado ",
       );
       return false;
     }
@@ -158,16 +166,17 @@ class VeiculoController {
     return true;
   }
 
-  //Atualizar Proprietário
-
-  //atualiza o nome do proprietário
+  //=============================================================================//
+  //                       ATUALIZAR PROPRIETÁRIO                                //
+  //=============================================================================//
+  //Atualiza o nome do proprietário
   atualizarNomeDoClienteEmTodosOsCarros(String nomeAntigo, String nomeNovo) {
-    //percorre toda a lista de veículos
+    //Percorre toda a lista de veículos
     for (var veiculo in listaDeVeiculos) {
       if (veiculo.proprietario.toUpperCase() == nomeAntigo.toUpperCase()) {
         veiculo.proprietario = nomeNovo;
       }
     }
-    print("Nome atualizado em todos os registros de $nomeNovo");
+    print("Nome atualizado em todos os rregistros de $nomeNovo");
   }
 }
