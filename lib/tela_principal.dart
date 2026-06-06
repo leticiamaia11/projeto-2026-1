@@ -1,18 +1,19 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:projeto_integrador/controllers/servico_controller.dart';
 import 'package:projeto_integrador/controllers/veículo_controller.dart';
+import 'package:projeto_integrador/controllers/usuario_controller.dart'; 
+import 'package:projeto_integrador/tela_login.dart'; 
 import 'package:projeto_integrador/view/lista_clientes.dart';
-import 'package:projeto_integrador/view/lista_veiulos.dart';
+import 'package:projeto_integrador/view/lista_veiulos.dart'; 
 import 'package:projeto_integrador/view/agendamento.dart';
 import 'package:projeto_integrador/view/servicos.dart';
-import 'package:projeto_integrador/view/relatorio_financeiro.dart';
+import 'package:projeto_integrador/view/relatorio_financeiro.dart'; // 🟢 Verificado o nome do arquivo
 import 'package:projeto_integrador/view/historico_servicos.dart';
 import 'package:projeto_integrador/view/calendario.dart';
 
 class TelaPrincipal extends StatefulWidget {
-   const TelaPrincipal({super.key});
+  const TelaPrincipal({super.key});
 
   @override
   State<TelaPrincipal> createState() => _TelaPrincipalState();
@@ -20,16 +21,29 @@ class TelaPrincipal extends StatefulWidget {
 
 class _TelaPrincipalState extends State<TelaPrincipal> {
   final VeiculoController _veiculoCtrl = VeiculoController();
+  final UsuarioController _usuarioCtrl = UsuarioController(); 
   late final ServicoController _servicoCtrl;
-  int indiceSelecionado = 0; //controla qual dia está marcado
-  late List<DiaCalendario> listaDias; //lista de datas reais
+  
+  int indiceSelecionado = 0; 
+  late List<DiaCalendario> listaDias; 
+
+  String _nomeUsuario = 'Carregando...';
 
   @override
   void initState() {
     super.initState();
     _servicoCtrl = ServicoController(veiculoController: _veiculoCtrl);
-    //gera os dias apenas uma vez, quando a tela abre
     listaDias = gerarDias();
+    _carregarNomeDoUsuario();
+  }
+
+  Future<void> _carregarNomeDoUsuario() async {
+    String nome = await _usuarioCtrl.obterNomeUsuarioLogado();
+    if (mounted) {
+      setState(() {
+        _nomeUsuario = nome; 
+      });
+    }
   }
 
   List<DiaCalendario> gerarDias() {
@@ -38,15 +52,11 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     List<String> nomesDias = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
 
     for (int i = 0; i < 7; i++) {
-      DateTime data = hoje.add(
-        Duration(days: i),
-      ); //gera a data do dia atual + i dias
+      DateTime data = hoje.add(Duration(days: i)); 
       dias.add(
         DiaCalendario(
           numero: data.day.toString(),
-          diaSemana:
-              nomesDias[data.weekday -
-                  1], //ajusta para pegar o nome correto do dia
+          diaSemana: nomesDias[data.weekday - 1], 
           dataCompleta: data,
         ),
       );
@@ -54,37 +64,49 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     return dias;
   }
 
+  Future<void> _executarLogout() async {
+    bool deslogou = await _usuarioCtrl.deslogarUsuario();
+    if (deslogou && mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const TelaLogin()),
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        leading: const Icon(Icons.logout, color: Color(0xFF1E40AF)),
-        title: const Text(
-          'Oficina Souza',
-          style: TextStyle(color: Color(0xFF1E40AF)),
+        leading: IconButton(
+          icon: const Icon(Icons.logout, color: Color(0xFF1E40AF)),
+          onPressed: _executarLogout,
         ),
-        actions: const [
+        title: const Text(
+          'Engetec - Soluções Automotivas',
+          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+        ),
+        actions: [
           Center(
-            child: Text('Fernanda', style: TextStyle(color: Color(0xFF1E40AF))),
+            child: Text(_nomeUsuario, style: const TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.w500)),
           ),
-          SizedBox(width: 8),
-          CircleAvatar(
+          const SizedBox(width: 8),
+          const CircleAvatar(
             backgroundColor: Colors.grey,
             child: Icon(Icons.person, color: Colors.white),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
         ],
         backgroundColor: Colors.white,
         elevation: 0,
       ),
 
       body: SingleChildScrollView(
-        // Permite rolar a tela e evita erro de espaço
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            //Bloco da agenda
             Container(
               height: 180,
               width: double.infinity,
@@ -104,6 +126,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
                   ),
@@ -117,12 +140,15 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                         final dia = listaDias[index];
                         return GestureDetector(
                           onTap: () {
+                            setState(() {
+                              indiceSelecionado = index; 
+                            });
                             _navegar(context, const TelaCalendario());
                           },
                           child: CardDia(
                             numero: dia.numero,
                             diaSemana: dia.diaSemana,
-                            selecionado: indiceSelecionado == index,
+                            selecionado: indiceSelecionado == index, 
                           ),
                         );
                       },
@@ -140,15 +166,14 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               ),
             ),
 
-            //grid de botões
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: GridView.count(
-                shrinkWrap:
-                    true, // Permite que o GridView ocupe apenas o espaço necessário
-                crossAxisCount: 3, // Número de colunas
-                crossAxisSpacing: 15, // Espaçamento horizontal entre os itens
-                mainAxisSpacing: 15, // Espaçamento vertical entre os itens
+                shrinkWrap: true, 
+                physics: const NeverScrollableScrollPhysics(), // Evita conflitos de rolagem dentro do SingleChildScrollView
+                crossAxisCount: 3, 
+                crossAxisSpacing: 15, 
+                mainAxisSpacing: 15, 
                 children: [
                   BotaoMenu(
                     label: 'Clientes',
@@ -158,7 +183,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                   BotaoMenu(
                     label: 'Veículos',
                     icon: Icons.directions_car_filled_outlined,
-                    onTap: () => _navegar(context, const ListaVeiculos()),
+                    onTap: () => _navegar(context, const ListaVeiculos()), //  Corrigido o nome da classe da View externa
                   ),
                   BotaoMenu(
                     label: 'Agendar',
@@ -168,21 +193,26 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                   BotaoMenu(
                     label: 'Serviços',
                     icon: Icons.build_outlined,
-                    onTap: () => _navegar(context, const TelaServicos()),
+                    onTap: () => _navegar(context, TelaServicos(servicoController: _servicoCtrl)),
                   ),
                   BotaoMenu(
                     label: 'Relatório',
                     icon: Icons.attach_money_outlined,
+                    // Injetados os controllers obrigatórios exigidos pela TelaRelatorio
                     onTap: () => _navegar(context, TelaRelatorio(servicoController: _servicoCtrl, veiculoController: _veiculoCtrl)),
                   ),
                   BotaoMenu(
                     label: 'Histórico',
                     icon: Icons.access_time_outlined,
-                    onTap: () => _navegar(context, const TelaHistorico()),
+                    onTap: () => _navegar(
+    context, 
+   const TelaHistorico(
+      veiculo: {})), // Corrigido o nome da classe da View externa
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -194,7 +224,10 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   }
 }
 
-//Widget personalizado do card
+//===============================================================================
+//                          COMPONENTES AUXILIARES
+//===============================================================================
+
 class BotaoMenu extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -219,13 +252,14 @@ class BotaoMenu extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 50, color: Colors.white),
+            Icon(icon, size: 40, color: Colors.white), // Reduzido levemente de 50 para 40 para evitar overflow em telas menores
             const SizedBox(height: 8),
             Text(
               label,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w500,
+                fontSize: 13,
               ),
             ),
           ],
@@ -234,8 +268,6 @@ class BotaoMenu extends StatelessWidget {
     );
   }
 }
-
-// Telas de exemplo para o teste
 
 class DiaCalendario {
   final String numero;

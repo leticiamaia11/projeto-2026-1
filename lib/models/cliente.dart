@@ -22,14 +22,14 @@ class Cliente {
     List<Veiculo>? veiculos,
   }) : meusVeiculos = veiculos ?? [];
 
-  //CONEXÃO COM BANCO DE DADOS
+  //CONEXÃO COM BANCO DE DADOS (Atualizado com os nomes de colunas padrão de banco)
   factory Cliente.fromMap(Map<String, dynamic> map) {
     return Cliente(
       id: map['id'],
-      nomeCompleto: map['nomeCompleto'],
-      cpf: map['cpf'],
-      telefone: map['telefone'],
-      email: map['email'],
+      nomeCompleto: map['nome_completo'] ?? map['nomeCompleto'] ?? '',
+      cpf: map['cpf'] ?? '',
+      telefone: map['telefone'] ?? '',
+      email: map['email'] ?? '',
       endereco: map['endereco'],
       observacoes: map['observacoes'],
     );
@@ -38,7 +38,7 @@ class Cliente {
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id, ///////////////////////
-      'nomeCompleto': nomeCompleto,
+      'nome_completo': nomeCompleto, // Mapeado para snake_case do banco
       'cpf': cpf,
       'telefone': telefone,
       'email': email,

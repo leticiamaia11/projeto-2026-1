@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:projeto_integrador/view/cadastro_cliente.dart';
-import 'package:projeto_integrador/mock/agendamentos_mock.dart';
+import 'package:projeto_integrador/controllers/agendamento_controller.dart';
 
 class TelaAgendamento extends StatefulWidget {
   const TelaAgendamento({super.key});
@@ -10,151 +10,150 @@ class TelaAgendamento extends StatefulWidget {
 }
 
 class _TelaAgendamentoState extends State<TelaAgendamento> {
-  // Variável para controlar qual cliente está selecionado. Começa nula para forçar o usuário a selecionar uma opção obrigatoriamente
-  String? clienteSelecionado;
+  final AgendamentoController _controller = AgendamentoController();
+  bool _carregando = false; // Controla o feedback visual de salvamento
 
-  // Chave global que gerencia o estado e validação do formulário
-  final _formKey = GlobalKey<FormState>();
-
-  // Controladores dos campos normais (adicionados para capturar o texto do Serviço e Descrição)
-  final TextEditingController _servicoController = TextEditingController();
-  final TextEditingController _descricaoController = TextEditingController();
-
-  // Controladores para capturar e mostrar os textos nos campos
-  final TextEditingController _dataController = TextEditingController();
-  final TextEditingController _inicioController = TextEditingController();
-  final TextEditingController _fimController = TextEditingController();
-
-  // Variáveis para guardar o horário puro (TimeOfDay) para fazer as contas de validação
-  TimeOfDay? _horaInicioReal;
-  TimeOfDay? _horaFimReal;
-  DateTime? _dataReal;
-
-  // Função para selecionar a data usando o DatePicker do Flutter
   void _showDatePicker() async {
     final DateTime? selectedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
+      firstDate: DateTime.now(),
       lastDate: DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1E40AF), // Cor azul padrão
-              onPrimary: Colors.white,
-              onSurface: Color(0xFF1E40AF),
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (selectedDate != null) {
       setState(() {
-        _dataReal = selectedDate;
-        _dataController.text =
-            "${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year}"; // Formata para o padrão DD/MM/YYYY
+        _controller.atualizarData(selectedDate);
       });
     }
   }
 
-  // Função para selecionar o horário usando o TimePicker do Flutter
   void _showInicioTimePicker() async {
     TimeOfDay? horaSelecionada = await showTimePicker(
       context: context,
-      initialTime: _horaInicioReal ?? TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1E40AF), // Cor azul padrão
-              onPrimary: Colors.white,
-              onSurface: Color(0xFF1E40AF),
-            ),
-          ),
-          child: child!,
-        );
-      },
+      initialTime: _controller.horaInicioReal ?? TimeOfDay.now(),
     );
-
     if (horaSelecionada != null) {
-      // Se o usuário já tinha selecionado um horário de fim, e o novo início for DEPOIS do fim, limpa o fim
-      if (_horaFimReal != null) {
-        final inicioMinutos =
-            horaSelecionada.hour * 60 + horaSelecionada.minute;
-        final fimMinutos = _horaFimReal!.hour * 60 + _horaFimReal!.minute;
-
-        // Se o início for igual ou depois do fim, limpa o fim e avisa o usuário
-        if (inicioMinutos >= fimMinutos) {
-          setState(() {
-             _horaFimReal = null;
-              _fimController.clear();
-          });
+      setState(() {
+        bool limpouFim = _controller.atualizarHorarioInicio(horaSelecionada);
+        if (limpouFim) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                "O horário de início mudou. Selecione o fim novamente.")),
+            const SnackBar(content: Text("O horário de início mudou. Selecione o fim novamente.")),
           );
         }
-      }
-      setState(() {
-        _horaInicioReal = horaSelecionada; // Guarda o horário puro para futuras validações
-        // Formata para o padrão HH:MM (ex: 09:30)
-        _inicioController.text =
-            "${horaSelecionada.hour.toString().padLeft(2, '0')}:${horaSelecionada.minute.toString().padLeft(2, '0')}";
       });
     }
   }
 
   void _showFimTimePicker() async {
-    // Impede de escolher o fim sem antes ter definido o início
-    if (_horaInicioReal == null) {
+    if (_controller.horaInicioReal == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Selecione o horário de início primeiro.")),
+        const SnackBar(content: Text("Selecione o horário de início primeiro.")),
       );
       return;
     }
-
     TimeOfDay? horaSelecionada = await showTimePicker(
       context: context,
-      initialTime:
-          _horaInicioReal!, // Começa o picker já no horário de início selecionado
+      initialTime: _controller.horaInicioReal!,
     );
-
     if (horaSelecionada != null) {
-      // Convertendo tudo para minutos para comparar se o fim é antes do início
-      final inicioMinutos =
-          _horaInicioReal!.hour * 60 + _horaInicioReal!.minute;
-      final fimMinutos = horaSelecionada.hour * 60 + horaSelecionada.minute;
-
-      if (fimMinutos <= inicioMinutos) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.redAccent,
-            content: Text(
-              'O horário de término deve ser após o horário de início!'),
-          ),
-        );
-        return; // Sai da função sem atualizar o campo
-      }
-
       setState(() {
-        _horaFimReal = horaSelecionada; // Guarda o horário puro para futuras validações
-        _fimController.text = "${horaSelecionada.hour.toString().padLeft(2, '0')}:${horaSelecionada.minute.toString().padLeft(2, '0')}";
+        bool valido = _controller.atualizarHorarioFim(horaSelecionada);
+        if (!valido) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Colors.redAccent,
+              content: Text('O horário de término deve ser após o horário de início!'),
+            ),
+          );
+        }
       });
     }
   }
 
+  // Mudado para ASYNC para aguardar as respostas reais do Banco de Dados
+  void _validarEProcessarAgendamento() async {
+    if (!_controller.formKey.currentState!.validate()) return;
+
+    if (_controller.clienteSelecionadoCompleto == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(backgroundColor: Colors.redAccent, content: Text("Selecione um cliente para continuar.")),
+      );
+      return;
+    }
+
+    setState(() => _carregando = true); // Ativa o loading na tela
+
+    // 1. FLUXO ALTERNATIVO: Aguarda validação assíncrona de conflito vinda do Banco
+    bool existeConflito = await _controller.verificarConflitoHorarioNoBanco();
+    if (existeConflito) {
+      setState(() => _carregando = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.orangeAccent,
+          content: Text("O horário selecionado já possui um agendamento no banco de dados!"),
+        ),
+      );
+      return;
+    }
+
+    // 2. FLUXO ALTERNATIVO: Aguarda verificação de histórico do cliente no Banco
+    bool clienteJaTemServico = await _controller.clienteJaPossuiAgendamentoNoBanco();
+    setState(() => _carregando = false); // Desativa antes de abrir o modal
+
+    if (clienteJaTemServico) {
+      _mostrarAlertaClienteRepetido();
+    } else {
+      _concluirAgendamento();
+    }
+  }
+
+  void _mostrarAlertaClienteRepetido() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Cliente já Agendado"),
+        content: const Text("Este cliente já possui um serviço registrado no banco. Deseja agendar novamente?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _concluirAgendamento();
+            },
+            child: const Text("Agendar Novamente", style: TextStyle(color: Color(0xFF1E40AF))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Envia a ordem de gravação final e monitora o sucesso da operação na nuvem/rede
+  void _concluirAgendamento() async {
+    setState(() => _carregando = true);
+    
+    bool sucesso = await _controller.salvarNoBancoDeDados();
+    
+    if (!mounted) return;
+    setState(() => _carregando = false);
+
+    if (sucesso) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(backgroundColor: Colors.green, content: Text("Agendamento salvo com sucesso no banco!")),
+      );
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(backgroundColor: Colors.redAccent, content: Text("Falha ao salvar. Verifique a conexão.")),
+      );
+    }
+  }
+
   @override
-  // Limpa os controladores ao fechar a tela para evitar vazamento de memória
   void dispose() {
-    _servicoController.dispose();
-    _descricaoController.dispose();
-    _dataController.dispose();
-    _inicioController.dispose();
-    _fimController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -173,20 +172,15 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
         elevation: 0,
         title: const Text(
           'Novo Agendamento',
-          style: TextStyle(
-            color: Color(0xFF1E40AF),
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1E40AF)),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-
-      //Envolvendo o corpo com o Form para ativar as validações automáticas
       body: Form(
-        key: _formKey,
+        key: _controller.formKey,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Center(
@@ -195,42 +189,28 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  //Adicionado controller para o Serviço
-                  _buildTextField(
-                    'Serviço',
-                    estiloBorda,
-                    controller: _servicoController,
-                  ),
+                  _buildTextField('Serviço', estiloBorda, controller: _controller.servicoController),
                   const SizedBox(height: 16),
-
                   _buildTextField(
                     'Data',
                     estiloBorda,
                     icon: Icons.calendar_today_outlined,
-                    controller: _dataController,
+                    controller: _controller.dataController,
                     readOnly: true,
                     onTap: _showDatePicker,
                   ),
                   const SizedBox(height: 16),
-
-                  _buildTextField(
-                    'Descrição',
-                    estiloBorda,
-                    isLong: true,
-                    controller: _descricaoController,
-                  ),
+                  _buildTextField('Descrição / Acordos do WhatsApp', estiloBorda, isLong: true, controller: _controller.descricaoController),
                   const SizedBox(height: 16),
-
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment
-                        .start, // Mantém o alinhamento correto caso surja o texto de erro abaixo
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: _buildTextField(
                           'Início',
                           estiloBorda,
                           icon: Icons.access_time,
-                          controller: _inicioController,
+                          controller: _controller.inicioController,
                           readOnly: true,
                           onTap: _showInicioTimePicker,
                         ),
@@ -241,7 +221,7 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
                           'Fim',
                           estiloBorda,
                           icon: Icons.access_time,
-                          controller: _fimController,
+                          controller: _controller.fimController,
                           readOnly: true,
                           onTap: _showFimTimePicker,
                         ),
@@ -249,99 +229,45 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
                     ],
                   ),
                   const SizedBox(height: 24),
-
                   const Text(
-                    "Selecione Cliente",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Color(0xFF1E40AF),
-                    ),
+                    "Selecione Cliente & Veículo",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E40AF)),
                   ),
                   const SizedBox(height: 12),
-
-                  // seletor de cliente (simulação)
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _buildClientChip("Emily", Colors.purple),
-                      _buildClientChip("Letícia", Colors.green),
-                      _buildClientChip("Thayná", Colors.blue),
+                      _buildClientChip("Emily", "Celta - ABC1234", Colors.purple),
+                      _buildClientChip("Letícia", "Onix - ABC0000", Colors.green),
+                      _buildClientChip("Thayná", "Gol - ABC1111", Colors.blue),
                       TextButton(
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => const TelaCadastroCliente(),
-                            ),
+                            MaterialPageRoute(builder: (_) => const TelaCadastroCliente()),
                           );
                         },
-                        child: const Text(
-                          "+ Adicionar",
-                          style: TextStyle(color: Color(0xFF1E40AF)),
-                        ),
+                        child: const Text("+ Adicionar", style: TextStyle(color: Color(0xFF1E40AF))),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 32),
-
-                  // Botão Agendar
                   Center(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // Executa os validadores do Form antes de salvar
-                        if (_formKey.currentState!.validate()) {
-                          // Como o ChoiceChip não é um campo nativo do Form, validamos ele manualmente aqui
-                          if (clienteSelecionado == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                backgroundColor: Colors.redAccent,
-                                content: Text(
-                                  "Selecione um cliente para continuar.",
-                                ),
-                              ),
-                            );
-                            return; // Sai da função sem fechar a tela
-                          }
-
-                          // Lógica para salvar o agendamento
-                          // NOVO: Adiciona o objeto estruturado à lista simulada global antes de fechar a tela
-                          setState(() {
-                            listaAgendamentosGlobais.add(
-                              AgendamentoModel(
-                                servico: _servicoController.text,
-                                descricao: _descricaoController.text,
-                                data: _dataReal ?? DateTime.now(),
-                                inicio: _inicioController.text,
-                                fim: _fimController.text,
-                                cliente: clienteSelecionado!,
-                              ),
-                            );
-                          });
-                          
-
-                          Navigator.pop(context);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(
-                          double.infinity,
-                          52,
-                        ), // Largura total do container pai
-                        backgroundColor: const Color(0xFF1E40AF),
-                        shape: const StadiumBorder(),
-                      ),
-                      child: const Text(
-                        'Agendar',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
+                    child: _carregando
+                        ? const CircularProgressIndicator(color: Color(0xFF1E40AF)) // Carregamento visual para rede lenta
+                        : ElevatedButton(
+                            onPressed: _validarEProcessarAgendamento,
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 52),
+                              backgroundColor: const Color(0xFF1E40AF),
+                              shape: const StadiumBorder(),
+                            ),
+                            child: const Text(
+                              'Agendar',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -352,79 +278,58 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
     );
   }
 
-  // Função auxiliar para criar os campos de texto
-  Widget _buildTextField(
-    String label,
-    OutlineInputBorder estiloBorda, {
-    bool isLong = false,
-    IconData? icon,
-    TextEditingController? controller,
-    bool readOnly = false,
-    VoidCallback? onTap,
-  }) {
+  Widget _buildTextField(String label, OutlineInputBorder estiloBorda, {bool isLong = false, IconData? icon, TextEditingController? controller, bool readOnly = false, VoidCallback? onTap}) {
     return TextFormField(
-      controller:
-          controller, // Permite controlar o valor do campo (ex: para data)
-      readOnly: readOnly, // Impede o teclado de aparecer
-      onTap: onTap, // Executa a função ao clicar
-      maxLines: isLong ? 3 : 1, // Se for campo longo, permite mais linhas
-      // Adicionado validador padrão de obrigatoriedade
+      controller: controller,
+      readOnly: readOnly,
+      onTap: onTap,
+      maxLines: isLong ? 3 : 1,
       validator: (value) {
-        if (value == null || value.trim().isEmpty) {
-          return 'Este campo é obrigatório';
-        }
+        if (value == null || value.trim().isEmpty) return 'Este campo é obrigatório';
         return null;
       },
       decoration: InputDecoration(
         labelText: label,
-        suffixIcon: icon != null
-            ? Icon(icon, color: Colors.grey, size: 20)
-            : null,
+        suffixIcon: icon != null ? Icon(icon, color: Colors.grey, size: 20) : null,
         filled: true,
         fillColor: const Color(0xFFE5E7EB),
         border: estiloBorda,
         enabledBorder: estiloBorda,
-        focusedBorder: estiloBorda.copyWith(
-          borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1),
-        ),
-
-        // Adicionada a estilização de erros customizada
+        focusedBorder: estiloBorda.copyWith(borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1)),
         errorStyle: const TextStyle(color: Colors.redAccent),
-        focusedErrorBorder: estiloBorda.copyWith(
-          borderSide: const BorderSide(color: Colors.redAccent, width: 1),
-        ),
-        errorBorder: estiloBorda.copyWith(
-          borderSide: const BorderSide(color: Colors.redAccent, width: 0.5),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
-        ),
+        focusedErrorBorder: estiloBorda.copyWith(borderSide: const BorderSide(color: Colors.redAccent, width: 1)),
+        errorBorder: estiloBorda.copyWith(borderSide: const BorderSide(color: Colors.redAccent, width: 0.5)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       ),
     );
   }
 
-  // Widget para os filtros de cliente (Chips)
-  Widget _buildClientChip(String name, Color color) {
-    bool isSelected = clienteSelecionado == name;
+  Widget _buildClientChip(String name, String veiculo, Color color) {
+    bool isSelected = _controller.clienteSelecionadoCompleto?['nome'] == name;
     return ChoiceChip(
-      label: Text(name),
+      label: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(name, style: const TextStyle(fontSize: 14)),
+          Text(veiculo, style: TextStyle(fontSize: 10, color: isSelected ? Colors.black54 : Colors.grey)),
+        ],
+      ),
       selected: isSelected,
       onSelected: (selected) {
-        // Atualiza o cliente selecionado
         setState(() {
-          clienteSelecionado = name;
+          if (selected) {
+            _controller.clienteSelecionadoCompleto = {'nome': name, 'veiculo': veiculo};
+          } else {
+            _controller.clienteSelecionadoCompleto = null;
+          }
         });
       },
-      selectedColor: color.withValues(alpha: 0.1),
+      selectedColor: color.withAlpha(30),
       backgroundColor: Colors.white,
       side: BorderSide(color: isSelected ? color : Colors.grey.shade300),
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.black : Colors.grey,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, // Deixa o nome em negrito quando selecionado
-      ),
-      avatar: CircleAvatar(radius: 4, backgroundColor: color),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      labelStyle: TextStyle(color: isSelected ? Colors.black : Colors.grey, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:projeto_integrador/controllers/servico_controller.dart';
+import 'package:projeto_integrador/models/gasto.dart'; // Importa o modelo correto da pasta models
 
 class TelaSaidaFinanceira extends StatefulWidget {
   final ServicoController servicoController;
@@ -13,28 +14,24 @@ class TelaSaidaFinanceira extends StatefulWidget {
 }
 
 class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
-  // Chave do formulário para validação
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers para capturar o texto dos inputs
   final _tituloCtrl = TextEditingController();
   final _descricaoCtrl = TextEditingController();
   final _dataCtrl = TextEditingController();
   final _valorCtrl = TextEditingController();
 
-  // Variável para armazenar o objeto DateTime selecionado
   DateTime? _dataSelecionada;
 
-  // UX: Filtro de Proteção para o valor monetário (Apenas números)
+  // UX: Filtro de Proteção Corrigido para Valores Decimais Monetários
   var mascaraValor = MaskTextInputFormatter(
-    mask: '##########',
-    filter: {"#": RegExp(r'[0-9.]')},
+    mask: '################', // Permite digitação livre de números
+    filter: {"#": RegExp(r'[0-9.,]')},
     type: MaskAutoCompletionType.lazy,
   );
 
   @override
   void dispose() {
-    // Limpando ao fechar a tela 
     _tituloCtrl.dispose();
     _descricaoCtrl.dispose();
     _dataCtrl.dispose();
@@ -42,7 +39,6 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
     super.dispose();
   }
 
-  // Abre o calendário nativo do aparelho para escolha da data
   Future<void> _selecionarData(BuildContext context) async {
     final DateTime? selecionado = await showDatePicker(
       context: context,
@@ -53,7 +49,7 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1E40AF), // Cor azul identidade da oficina
+              primary: Color(0xFF1E40AF), 
               onPrimary: Colors.white,
               onSurface: Colors.black87,
             ),
@@ -66,53 +62,64 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
     if (selecionado != null) {
       setState(() {
         _dataSelecionada = selecionado;
-        // Formata visualmente para o usuário dentro do input
         _dataCtrl.text = "${selecionado.day.toString().padLeft(2, '0')}/${selecionado.month.toString().padLeft(2, '0')}/${selecionado.year}";
       });
     }
   }
 
-  // Realiza a validação local e salva os dados no Controller / Banco de Dados
+  // Realiza a validação local e persiste no Supabase
   Future<void> _realizarRegistro() async {
-    // 1. Validação Visual dos campos obrigatórios
     if (_formKey.currentState!.validate()) {
       
-      // Converte o texto digitado para double puro aceito pelo sistema de somas
+      // Converte o texto digitado substituindo a vírgula por ponto para o double.parse
       final valorTratado = double.tryParse(_valorCtrl.text.replaceAll(',', '.')) ?? 0.0;
 
-      // Unifica o título e a descrição para salvar na propriedade de histórico
+      // Unifica o título e a descrição conforme regra de negócio anterior
       final descricaoCompleta = "${_tituloCtrl.text} - ${_descricaoCtrl.text}";
 
-      // 2. Integração com o Controller / Sincronização futura com o Banco de dados
-      // Criamos um objeto dinâmico temporário contendo valor e data conforme esperado pelo relatório
-      final novoGasto = _ObjetoFinanceiro(
+      // Corrigido: Usando a propriedade nomeada 'dataInformada' exigida pelo seu arquivo gasto.dart
+      final novoGasto = Gasto(
         descricao: descricaoCompleta,
         valor: valorTratado,
-        data: _dataSelecionada ?? DateTime.now(),
+        dataInformada: _dataSelecionada ?? DateTime.now(),
       );
 
-      // TODO: Conexão futura com o Banco de Dados (Supabase/Firebase):
-      // No futuro, o método do seu controller fará um escopo assíncrono:
-      // await widget.servicoController.enviarSaidaParaOBanco(novoGasto);
-      
-      // Armazena na lista reativa de gastos internos na memória estável
-      widget.servicoController.listaDeGastos.add(novoGasto);
-
-      // Feedback visual de sucesso para o usuário
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Saída financeira registrada com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
+      // Mostra um indicador de carregamento simples
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      Navigator.pop(context); // Retorna fechando a tela e atualizando o relatório
+      // Envia os dados para a tabela do Supabase criada no controller
+      bool sucesso = await widget.servicoController.adicionarGasto(novoGasto);
+
+      Navigator.pop(context); // Remove o CircularProgressIndicator da tela
+
+      if (sucesso) {
+        // CRITÉRIO DE ACEITE: Exibir mensagem confirmando a adição dos dados
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Saída financeira registrada com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // CRITÉRIO DE ACEITE: Redirecionar para o relatório de origem atualizado
+        Navigator.pop(context); 
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro ao salvar no banco de dados. Tente novamente.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Estilo padrão arredondado sem bordas pretas (idêntico ao de Clientes)
     final estiloBorda = OutlineInputBorder(
       borderRadius: BorderRadius.circular(30.0),
       borderSide: BorderSide.none,
@@ -137,13 +144,12 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: SizedBox(
-            width: 350, // Largura padrão ideal para mobile e desktop comprimido
+            width: 350, 
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // CAMPO TÍTULO
                   _buildTextField(
                     'Título',
                     estiloBorda,
@@ -158,7 +164,6 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
                   ),
                   const SizedBox(height: 16),
 
-                  // CAMPO DESCRIÇÃO
                   _buildTextField(
                     'Descrição',
                     estiloBorda,
@@ -174,7 +179,6 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
                   ),
                   const SizedBox(height: 16),
 
-                  // CAMPO DATA (Com GestureDetector para disparar o DatePicker)
                   GestureDetector(
                     onTap: () => _selecionarData(context),
                     child: AbsorbPointer(
@@ -195,18 +199,19 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
                   ),
                   const SizedBox(height: 16),
 
-                  // CAMPO VALOR TOTAL
                   _buildTextField(
                     'Valor Total',
                     estiloBorda,
                     controller: _valorCtrl,
-                    hint: 'R\$ 0,00',
+                    hint: '0.00',
+                    inputFormatters: [mascaraValor],
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Informe o valor total gasto';
                       }
-                      if (double.tryParse(value.replaceAll(',', '.')) == null) {
+                      final valorLimpo = value.replaceAll(',', '.');
+                      if (double.tryParse(valorLimpo) == null) {
                         return 'Digite um valor numérico válido';
                       }
                       return null;
@@ -214,12 +219,11 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
                   ),
                   const SizedBox(height: 32),
 
-                  // BOTÃO REGISTRAR (Estilo cápsula cinza/azul idêntico ao mockup)
                   ElevatedButton(
                     onPressed: _realizarRegistro,
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(220, 48),
-                      backgroundColor: const Color(0xFFE5E7EB), // Fundo acinzentado conforme imagem
+                      backgroundColor: const Color(0xFFE5E7EB), 
                       elevation: 0,
                       shape: const StadiumBorder(),
                     ),
@@ -237,13 +241,12 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
     );
   }
 
-  // Componente de campo de texto customizado adaptado para suportar ícones de sufixo
   Widget _buildTextField(
     String label,
     OutlineInputBorder border, {
     TextEditingController? controller,
     FormFieldValidator<String>? validator,
-    List<dynamic>? inputFormatters,
+    List<TextInputFormatter>? inputFormatters,
     String? hint,
     TextInputType? keyboardType,
     int maxLines = 1,
@@ -252,7 +255,7 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
     return TextFormField(
       controller: controller,
       validator: validator,
-      inputFormatters: inputFormatters?.cast<TextInputFormatter>(),
+      inputFormatters: inputFormatters,
       keyboardType: keyboardType,
       maxLines: maxLines,
       decoration: InputDecoration(
@@ -260,7 +263,7 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
         alignLabelWithHint: true,
         hintText: hint,
         filled: true,
-        fillColor: const Color(0xFFE5E7EB), // Cinza claro idêntico ao cadastro de clientes
+        fillColor: const Color(0xFFE5E7EB), 
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(
@@ -272,17 +275,4 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
       ),
     );
   }
-}
-
-// Classe de Modelo auxiliar para estruturar os dados de Gastos na ausência do arquivo definitivo
-class _ObjetoFinanceiro {
-  final String descricao;
-  final double valor;
-  final DateTime data;
-
-  _ObjetoFinanceiro({
-    required this.descricao,
-    required this.valor,
-    required this.data,
-  });
 }

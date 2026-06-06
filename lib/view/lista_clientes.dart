@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:projeto_integrador/controllers/cliente_controller.dart';
+import 'package:projeto_integrador/controllers/veículo_controller.dart'; // Import necessário para o construtor
+import 'package:projeto_integrador/models/cliente.dart';
 import 'package:projeto_integrador/view/cadastro_cliente.dart';
 import 'package:projeto_integrador/view/perfil_cliente.dart';
 
@@ -10,29 +13,44 @@ class ListaClientes extends StatefulWidget {
 }
 
 class _ListaClientesState extends State<ListaClientes> {
-  // Exemplo de lista de usuários (isso pode ficar aqui dentro sem problemas por enquanto)
-  final List<Map<String, String>> todosClientes = [
-    {'nome': 'Leticia Maia', 'veiculo': 'Honda Civic - ABC1234'},
-    {'nome': 'Emily Sabrina', 'veiculo': 'Fiat Argo - DEF5678'},
-  ];
-
-  late List<Map<String, String>> clientesFiltrados;
+  // Instanciamos o seu Controller oficial. 
+  // (Como ele pede um VeiculoController no construtor, passamos aqui)
+  late final ClienteController _clienteController;
+  
+  List<Cliente> _clientesExibidos = [];
+  bool _estaCarregando = true;
 
   @override
   void initState() {
     super.initState();
-    clientesFiltrados = todosClientes; // Inicialmente mostra todos
+    _clienteController = ClienteController(veiculoController: VeiculoController());
+    _inicializarLista();
   }
 
+  /// Carrega os dados do Supabase e organiza em ordem alfabética usando seu método
+  Future<void> _inicializarLista() async {
+    setState(() => _estaCarregando = true);
+    
+    // Puxa os dados da nuvem para a memória local do controller
+    await _clienteController.carregarClientesDoBanco();
+    
+    if (mounted) {
+      setState(() {
+        // REQUISITO ATENDIDO: Usa seu método 'obterClientesOrdenados()'
+        _clientesExibidos = _clienteController.obterClientesOrdenados();
+        _estaCarregando = false;
+      });
+    }
+  }
+
+  /// REQUISITO ATENDIDO: Usa seu método 'pesquisarCliente()' para filtrar a lista
   void _filtrarClientes(String query) {
     setState(() {
-      clientesFiltrados = todosClientes
-          .where(
-            (cliente) =>
-                cliente['nome']!.toLowerCase().contains(query.toLowerCase()) ||
-                cliente['veiculo']!.toLowerCase().contains(query.toLowerCase()),
-          )
-          .toList();
+      if (query.isEmpty) {
+        _clientesExibidos = _clienteController.obterClientesOrdenados();
+      } else {
+        _clientesExibidos = _clienteController.pesquisarCliente(query);
+      }
     });
   }
 
@@ -58,11 +76,11 @@ class _ListaClientesState extends State<ListaClientes> {
       ),
       body: Column(
         children: [
-          // Campo de busca
+          // Seu campo de busca original intacto
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
-              onChanged: (value) => _filtrarClientes(value),
+              onChanged: _filtrarClientes, // Conectado à sua lógica de pesquisa
               decoration: InputDecoration(
                 hintText: 'Buscar cliente...',
                 prefixIcon: const Icon(Icons.search),
@@ -76,63 +94,86 @@ class _ListaClientesState extends State<ListaClientes> {
             ),
           ),
 
+          // Lista dinâmica tratando o loading do Supabase
           Expanded(
-            child: ListView.builder(
-              itemCount: clientesFiltrados.length,
-              itemBuilder: (context, index) {
-                final cliente = clientesFiltrados[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  elevation: 2,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: const Color(0xFF91B9D1),
-                      child: Text(
-                        cliente['nome']![0],
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                    title: Text(
-                      cliente['nome']!,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E40AF),
-                      ),
-                    ),
-                    subtitle: Text(cliente['veiculo']!),
-                    trailing: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: Colors.grey,
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>  PerfilCliente(cliente: cliente),
+            child: _estaCarregando
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF1E40AF)))
+                : _clientesExibidos.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Nenhum cliente cadastrado.',
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
                         ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+                      )
+                    : ListView.builder(
+                        itemCount: _clientesExibidos.length,
+                        itemBuilder: (context, index) {
+                          final cliente = _clientesExibidos[index];
+                          
+                          // Verifica se o cliente tem veículo para não quebrar a tela
+                          String textoVeiculo = cliente.meusVeiculos.isNotEmpty
+                              ? '${cliente.meusVeiculos.first.modelo} - ${cliente.meusVeiculos.first.placa}'
+                              : 'Sem veículo vinculado';
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            elevation: 2,
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: const Color(0xFF91B9D1),
+                                child: Text(
+                                  cliente.nomeCompleto.isNotEmpty ? cliente.nomeCompleto[0].toUpperCase() : 'C',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                              title: Text(
+                                cliente.nomeCompleto, // Seu campo oficial
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1E40AF),
+                                ),
+                              ),
+                              subtitle: Text(textoVeiculo),
+                              trailing: const Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: Colors.grey,
+                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    // Passa o objeto cliente real completo para a tela de perfil
+                                    builder: (_) => PerfilCliente(
+                                      cliente: {
+                                        'nome': cliente.nomeCompleto,
+                                        'veiculo': textoVeiculo,
+                                        'cpf': cliente.cpf,
+                                        'telefone': cliente.telefone,
+                                        'email': cliente.email,
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),
-      // O botão flutuante deve ficar DENTRO do Scaffold, mas FORA do body
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          // Abre a tela de cadastro e, quando o usuário voltar, recarrega a lista do Supabase
+          await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const TelaCadastroCliente()),
           );
+          _inicializarLista();
         },
         backgroundColor: const Color(0xFF1E40AF),
         child: const Icon(Icons.add, color: Colors.white),

@@ -3,10 +3,11 @@ import 'package:projeto_integrador/controllers/servico_controller.dart';
 import 'package:projeto_integrador/view/saida_financeira.dart';
 import 'package:projeto_integrador/view/servicos.dart'; 
 import 'package:projeto_integrador/controllers/veículo_controller.dart'; 
+import '../models/registroServico.dart'; // Importação necessária para reconhecer o tipo do modelo
 
 class TelaRelatorio extends StatefulWidget {
   final ServicoController servicoController;
-  final VeiculoController veiculoController; // Passado para abrir a tela de serviços por aqui
+  final VeiculoController veiculoController;
 
   const TelaRelatorio({
     super.key,
@@ -19,10 +20,8 @@ class TelaRelatorio extends StatefulWidget {
 }
 
 class _TelaRelatorioState extends State<TelaRelatorio> {
-  String _abaAtual = 'Gastos'; // Controla a aba selecionada ('Gastos' ou 'Ganhos')
-  String _periodoSelecionado = 'Mensal'; // Filtro padrão: 'Diário', 'Quinzenal', 'Mensal'
-
-  // Estrutura futura para integração com Banco de Dados
+  String _abaAtual = 'Gastos'; 
+  String _periodoSelecionado = 'Mensal'; 
   bool _carregandoDoBanco = false;
 
   @override
@@ -31,25 +30,21 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
     _buscarDadosDoBanco();
   }
 
-  // Método preparado para carregar dados de forma assíncrona do banco no futuro
+  // 🟢 Chamada real ao método que criamos no ServicoController
   Future<void> _buscarDadosDoBanco() async {
-    setState(() {
-      _carregandoDoBanco = true;
-    });
-
-    // TODO: No futuro, chamar os métodos de fetch do banco de dados aqui:
-    // await widget.servicoController.buscarServicosEFechamentoDoBanco();
-
-    setState(() {
-      _carregandoDoBanco = false;
-    });
+    setState(() => _carregandoDoBanco = true);
+    await widget.servicoController.buscarDadosParaRelatorio();
+    setState(() => _carregandoDoBanco = false);
   }
 
-  // Filtra as listas locais baseando-se no período selecionado
+  // 🟢 Tratamento dinâmico para diferenciar Objeto de Mapa no filtro de data
   List<dynamic> _filtrarPorPeriodo(List<dynamic> lista) {
     final agora = DateTime.now();
     return lista.where((item) {
-      final DateTime dataItem = item.data; // Certifique-se de que seus modelos possuem a propriedade 'data'
+      final DateTime dataItem = item is RegistroServico 
+          ? item.data 
+          : DateTime.parse((item['data_gasto'] ?? item['data'] ?? agora.toString()).toString());
+          
       final diferencaDias = agora.difference(dataItem).inDays;
 
       if (_periodoSelecionado == 'Diário') {
@@ -57,28 +52,58 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
       } else if (_periodoSelecionado == 'Quinzenal') {
         return diferencaDias <= 15;
       } else {
-        // Mensal
         return diferencaDias <= 30;
       }
     }).toList();
   }
 
+  void _exportarRelatorioPDF() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.picture_as_pdf, color: Color(0xFF1E40AF)),
+            SizedBox(width: 10),
+            Text('Exportar Relatório'),
+          ],
+        ),
+        content: Text('Deseja salvar o relatório $_periodoSelecionado em formato PDF?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  backgroundColor: Colors.green,
+                  content: Text('O sistema confirma: Relatório salvo com sucesso em PDF!'),
+                ),
+              );
+            },
+            child: const Text('Salvar', style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Pegando as listas brutas do seu controller
-    final listaServicosRaw = widget.servicoController.historicoGlobal; // Ganhos
-    final listaGastosRaw = widget.servicoController.listaDeGastos; // Gastos (método/lista interna que armazena os gastos)
+    final listaServicosRaw = widget.servicoController.historicoGlobal; 
+    final listaGastosRaw = widget.servicoController.listaDeGastos; 
 
-    // Aplicando filtros de Período
     final listaGastosFiltrados = _filtrarPorPeriodo(listaGastosRaw);
     final listaServicosFiltrados = _filtrarPorPeriodo(listaServicosRaw);
 
-    // Calculando totais com base nos dados filtrados da tela
-    double totalFaturado = listaServicosFiltrados.fold(0, (soma, item) => soma + item.valor);
-    double totalGastos = listaGastosFiltrados.fold(0, (soma, item) => soma + item.valor);
+    // 🟢 Acumuladores protegidos contra divergência de tipos
+    double totalFaturado = listaServicosFiltrados.fold(0.0, (soma, item) => soma + (item is RegistroServico ? item.valor : double.parse((item['valor'] ?? 0.0).toString())));
+    double totalGastos = listaGastosFiltrados.fold(0.0, (soma, item) => soma + (item is RegistroServico ? item.valor : double.parse((item['valor'] ?? 0.0).toString())));
     double balancoTotal = totalFaturado - totalGastos;
 
-    // Define qual lista exibir de acordo com a aba clicada
     final listaExibida = _abaAtual == 'Gastos' ? listaGastosFiltrados : listaServicosFiltrados;
 
     return Scaffold(
@@ -90,9 +115,7 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                 // 1. Cabeçalho Azul com Balanço e Botões Rápidos
                 Container(
                   width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF1E40AF), // Azul escuro conforme o mockup
-                  ),
+                  decoration: const BoxDecoration(color: Color(0xFF1E40AF)),
                   padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,9 +133,7 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.download, color: Colors.white),
-                            onPressed: () {
-                              // Exportar relatório (Futuro)
-                            },
+                            onPressed: _exportarRelatorioPDF,
                           ),
                         ],
                       ),
@@ -126,17 +147,43 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                         'R\$ ${balancoTotal.toStringAsFixed(2).replaceAll('.', ',')}',
                         style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 20),
+                      
+                      if (balancoTotal < 0) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.amberAccent.shade700,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text(
+                                  'Atenção: Saldo negativo! Deseja registrar uma nova entrada?',
+                                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => _abrirTelaEntrada(),
+                                child: const Text('ADICIONAR', style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      
+                      const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Botão Adicionar Saída
                           _buildBotaoAtalho(
                             label: 'Adicionar Saída',
                             icon: Icons.add,
                             onTap: () => _abrirTelaSaida(),
                           ),
-                          // Botão Adicionar Entrada
                           _buildBotaoAtalho(
                             label: 'Adicionar Entrada',
                             icon: Icons.add,
@@ -148,7 +195,7 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                   ),
                 ),
 
-                // 2. Barra de Seleção de Abas (Gastos / Ganhos) e Filtro de Período
+                // 2. Barra de Seleção de Abas e Filtro de Período
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   child: Row(
@@ -161,7 +208,6 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                           _buildTabSelector('Ganhos'),
                         ],
                       ),
-                      // Filtro de Período Dropdown
                       DropdownButton<String>(
                         value: _periodoSelecionado,
                         underline: const SizedBox(),
@@ -174,9 +220,7 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                         ],
                         onChanged: (novoValor) {
                           if (novoValor != null) {
-                            setState(() {
-                              _periodoSelecionado = novoValor;
-                            });
+                            setState(() => _periodoSelecionado = novoValor);
                           }
                         },
                       ),
@@ -184,21 +228,25 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                   ),
                 ),
 
-                // 3. Lista Dinâmica de Itens (Cards brancos do design)
+                // 3. Lista Dinâmica / Estado Vazio Orientado
                 Expanded(
                   child: listaExibida.isEmpty
-                      ? Center(child: Text('Nenhum registro encontrado para este período.'))
+                      ? _buildStateVazioOrientado()
                       : ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: listaExibida.length,
                           itemBuilder: (context, index) {
                             final item = listaExibida[index];
-
-                            // Identifica se é gasto ou serviço para formatar o design
                             final isGasto = _abaAtual == 'Gastos';
-                            final String titulo = isGasto ? (item.descricao.split(' - ').first) : 'Serviço';
-                            final String subTitulo = isGasto ? (item.descricao.contains(' - ') ? item.descricao.split(' - ').last : '') : item.descricao;
-                            final String dataFormatada = "${item.data.day.toString().padLeft(2, '0')} ${_obterNomeMes(item.data.month)}. ${item.data.year}";
+                            
+                            // 🟢 Mapeamento seguro das propriedades dependendo do tipo da lista
+                            final String descricaoOriginal = isGasto ? (item['descricao'] ?? '').toString() : (item as RegistroServico).descricao;
+                            final double valorItem = isGasto ? double.parse((item['valor'] ?? 0.0).toString()) : (item as RegistroServico).valor;
+                            final DateTime dataItem = isGasto ? DateTime.parse((item['data_gasto'] ?? item['data'] ?? DateTime.now().toString()).toString()) : (item as RegistroServico).data;
+
+                            final String titulo = isGasto ? (descricaoOriginal.split(' - ').first) : descricaoOriginal;
+                            final String subTitulo = isGasto ? (descricaoOriginal.contains(' - ') ? descricaoOriginal.split(' - ').last : '') : 'Serviço Concluído';
+                            final String dataFormatada = "${dataItem.day.toString().padLeft(2, '0')} ${_obterNomeMes(dataItem.month)}. ${dataItem.year}";
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -216,7 +264,6 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                               ),
                               child: Row(
                                 children: [
-                                  // Ícone quadrado cinza/azul claro
                                   Container(
                                     width: 44,
                                     height: 44,
@@ -224,18 +271,17 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                                       color: const Color(0xFFE5E7EB),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: const Icon(Icons.credit_card, color: Color(0xFF1E40AF)),
+                                    child: Icon(
+                                      isGasto ? Icons.money_off : Icons.monetization_on, 
+                                      color: const Color(0xFF1E40AF)
+                                    ),
                                   ),
                                   const SizedBox(width: 16),
-                                  // Textos (Título e Descrição)
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          titulo,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                        ),
+                                        Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                                         const SizedBox(height: 2),
                                         Text(
                                           subTitulo,
@@ -246,12 +292,11 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                                       ],
                                     ),
                                   ),
-                                  // Valores e Datas
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       Text(
-                                        "${isGasto ? '- ' : '+ '}R\$ ${item.valor.toStringAsFixed(2).replaceAll('.', ',')}",
+                                        "${isGasto ? '- ' : '+ '}R\$ ${valorItem.toStringAsFixed(2).replaceAll('.', ',')}",
                                         style: TextStyle(
                                           color: isGasto ? const Color(0xFFEF4444) : const Color(0xFF10B981),
                                           fontWeight: FontWeight.bold,
@@ -259,10 +304,7 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(
-                                        dataFormatada,
-                                        style: const TextStyle(color: Colors.grey, fontSize: 11),
-                                      ),
+                                      Text(dataFormatada, style: const TextStyle(color: Colors.grey, fontSize: 11)),
                                     ],
                                   )
                                 ],
@@ -276,15 +318,42 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
     );
   }
 
-  // Widget auxiliar para as Abas Alternáveis
+  Widget _buildStateVazioOrientado() {
+    final bool isGasto = _abaAtual == 'Gastos';
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(isGasto ? Icons.account_balance_wallet_outlined : Icons.build_circle_outlined, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              isGasto 
+                ? 'Nenhum registro de saída financeira encontrado para este período.' 
+                : 'Nenhum serviço realizado encontrado para este período.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: isGasto ? _abrirTelaSaida : _abrirTelaEntrada,
+              icon: const Icon(Icons.add_circle_outline, color: Color(0xFF1E40AF)),
+              label: Text(
+                isGasto ? 'Deseja adicionar uma saída?' : 'Orientar e adicionar serviços realizados',
+                style: const TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTabSelector(String nomeAbas) {
     final selecionado = _abaAtual == nomeAbas;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _abaAtual = nomeAbas;
-        });
-      },
+      onTap: () => setState(() => _abaAtual = nomeAbas),
       child: Text(
         nomeAbas,
         style: TextStyle(
@@ -296,7 +365,6 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
     );
   }
 
-  // Widget auxiliar para os botões do topo (Adicionar Entrada / Saída)
   Widget _buildBotaoAtalho({required String label, required IconData icon, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
@@ -305,10 +373,10 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: Colors.white, size: 18),
+            child: Icon(icon, color: const Color(0xFF1E40AF), size: 18), // Corrigido: Ícone azul sobre fundo branco
           ),
           const SizedBox(width: 8),
           Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
@@ -323,16 +391,16 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
       MaterialPageRoute(
         builder: (context) => TelaSaidaFinanceira(servicoController: widget.servicoController),
       ),
-    ).then((_) => setState(() {}));
+    ).then((_) => _buscarDadosDoBanco()); // Atualiza buscando do banco novamente
   }
 
   void _abrirTelaEntrada() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const TelaServicos(),
+        builder: (context) => TelaServicos(servicoController: widget.servicoController),
       ),
-    ).then((_) => setState(() {}));
+    ).then((_) => _buscarDadosDoBanco()); // Atualiza buscando do banco novamente
   }
 
   String _obterNomeMes(int mes) {

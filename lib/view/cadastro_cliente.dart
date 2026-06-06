@@ -4,7 +4,7 @@ import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 // Importando os arquivos com base na estrutura de pastas (views -> controllers/models)
 import '../controllers/cliente_controller.dart';
-import '../controllers/veículo_controller.dart'; // Necessário para inicializar o cliente controller se preciso
+import '../controllers/veículo_controller.dart'; 
 import '../models/cliente.dart';
 
 class TelaCadastroCliente extends StatefulWidget {
@@ -18,8 +18,7 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
   // O Grampo da pasta (Chave do formulário)
   final _formKey = GlobalKey<FormState>();
 
-  // O Gerente da Oficina (Conexão com o Controller da sua colega)
-  // Nota: Como o ClienteController dela pede um VeiculoController no construtor, passamos aqui
+  // O Gerente da Oficina (Conexão com o Controller)
   final ClienteController _clienteCtrl = ClienteController(veiculoController: VeiculoController());
 
   // As Canetas Mágicas (Controllers para capturar o texto da tela)
@@ -29,6 +28,9 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
   final _emailCtrl = TextEditingController();
   final _enderecoCtrl = TextEditingController();
   final _observacoesCtrl = TextEditingController();
+
+  // Estado para controlar a animação de envio ao Supabase
+  bool _enviandoDados = false;
 
   // UX: Filtros de Proteção (Máscaras de preenchimento)
   var mascaraCpf = MaskTextInputFormatter(
@@ -55,23 +57,34 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
     super.dispose();
   }
 
-  void _realizarCadastro() {
-    // 1. Validação Visual
+  // REQUISITO ATENDIDO: Método transformado em assíncrono para esperar o Supabase
+  Future<void> _realizarCadastro() async {
+    // 1. Validação Visual do Formulário
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _enviandoDados = true; // Ativa o modo de carregamento
+      });
       
-      // Pegamos o CPF limpo (sem os pontos e traço da máscara) para mandar para o controller dela
+      // Pegamos o CPF limpo (sem os pontos e traço da máscara) para mandar para o controller
       String cpfLimpo = mascaraCpf.getUnmaskedText();
 
-      // 2. Chama a lógica oficial da sua colega
-      bool sucesso = _clienteCtrl.processarCadastroCliente(
+      // 2. Chama a lógica oficial conectada com o Supabase usando o await
+      bool sucesso = await _clienteCtrl.processarCadastroCliente(
         nome: _nomeCtrl.text,
-        cpf: cpfLimpo, // Enviando o CPF tratado
+        cpf: cpfLimpo, 
         telefone: _telefoneCtrl.text,
         email: _emailCtrl.text,
         endereco: _enderecoCtrl.text.isEmpty ? null : _enderecoCtrl.text,
         observacoes: _observacoesCtrl.text.isEmpty ? null : _observacoesCtrl.text,
       );
 
+      if (!mounted) return;
+
+      setState(() {
+        _enviandoDados = false; // Desativa o carregamento após a resposta do servidor
+      });
+
+      // FLUXO PRINCIPAL E ALTERNATIVO ATENDIDOS
       if (sucesso) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -79,12 +92,12 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context); // Volta para a lista de clientes
+        Navigator.pop(context); // Retorna com sucesso para a tela de listagem atualizada
       } else {
-        // Se cair aqui, é porque a trava de CPF dela foi acionada
+        // Se cair aqui, é porque a trava de CPF foi acionada ou houve falha de conexão
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Erro: Este CPF já está registrado no sistema.'),
+            content: Text('Erro: Este CPF já está registrado ou os dados são inválidos.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -217,19 +230,21 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
 
                   const SizedBox(height: 32),
 
-                  // BOTÃO SALVAR
-                  ElevatedButton(
-                    onPressed: _realizarCadastro,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(200, 48),
-                      backgroundColor: const Color(0xFF1E40AF), // Azul Identidade Engetec
-                      shape: const StadiumBorder(),
-                    ),
-                    child: const Text(
-                      'Salvar Cliente',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  // BOTÃO SALVAR COM FEEDBACK DE PROGRESSO
+                  _enviandoDados
+                      ? const CircularProgressIndicator(color: Color(0xFF1E40AF))
+                      : ElevatedButton(
+                          onPressed: _realizarCadastro,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(200, 48),
+                            backgroundColor: const Color(0xFF1E40AF), // Azul Identidade Engetec
+                            shape: const StadiumBorder(),
+                          ),
+                          child: const Text(
+                            'Salvar Cliente',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
                 ],
               ),
             ),

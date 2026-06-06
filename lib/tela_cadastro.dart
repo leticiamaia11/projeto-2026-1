@@ -1,16 +1,91 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:projeto_integrador/controllers/usuario_controller.dart';
 import 'package:projeto_integrador/tela_principal.dart';
 
-class TelaCadastro extends StatelessWidget {
+class TelaCadastro extends StatefulWidget {
   const TelaCadastro({super.key});
 
   @override
+  State<TelaCadastro> createState() => _TelaCadastroState();
+}
+
+class _TelaCadastroState extends State<TelaCadastro> {
+  final UsuarioController _cadastrarUsuarioController = UsuarioController();
+
+  final TextEditingController _nomeController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _telefoneController = TextEditingController();
+  final TextEditingController _cpfController = TextEditingController();
+  final TextEditingController _senhaController = TextEditingController();
+  final TextEditingController _confirmarSenhaController = TextEditingController();
+
+  bool _estaCarregando = false;
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _emailController.dispose();
+    _telefoneController.dispose();
+    _cpfController.dispose();
+    _senhaController.dispose();
+    _confirmarSenhaController.dispose();
+    super.dispose();
+  }
+
+  //===============================================================================
+  //                      FLUXO DE INTERAÇÃO DA TELA (VIEW)
+  //===============================================================================
+  Future<void> _executarCadastro() async {
+    setState(() {
+      _estaCarregando = true;
+    });
+
+    // Envia os dados direto para o controller validar e processar
+    String? mensagemErro = await _cadastrarUsuarioController.cadastrarUsuario(
+      nome: _nomeController.text.trim(),
+      email: _emailController.text.trim(),
+      senha: _senhaController.text,
+      confirmarSenha: _confirmarSenhaController.text,
+      cpfBruto: _cpfController.text,
+    );
+
+    setState(() {
+      _estaCarregando = false;
+    });
+
+    // Tomada de decisão puramente visual baseada no retorno do Controller
+    if (mensagemErro == null) {
+      // FLUXO PRINCIPAL: Sucesso
+      _mostrarSnackBar('Cadastro concluído com sucesso!', Colors.green);
+      
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const TelaPrincipal()),
+        );
+      }
+    } else {
+      // FLUXO ALTERNATIVO: O controller devolveu um erro (validação ou banco)
+      _mostrarSnackBar(mensagemErro, Colors.red);
+    }
+  }
+
+  void _mostrarSnackBar(String mensagem, Color cor) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: cor,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Definimos um estilo padrão para evitar repetir código em todos os campos
     final estiloBorda = OutlineInputBorder(
       borderRadius: BorderRadius.circular(30.0),
-      borderSide: BorderSide.none, // Remove a linha para destacar a cor de fundo
+      borderSide: BorderSide.none,
     );
 
     return Scaffold(
@@ -28,34 +103,30 @@ class TelaCadastro extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-
-      body: Center( // Centraliza o conteúdo horizontalmente
-        child: SingleChildScrollView( // Permite rolar a tela e evita erro de espaço
+      body: Center(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: SizedBox(
-            width: 350, // Define a largura máxima dos campos e botão
+            width: 350,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildTextField('Nome completo', estiloBorda),
+                _buildTextField('Nome completo', estiloBorda, controller: _nomeController),
                 const SizedBox(height: 16),
                 
-                _buildTextField('E-mail', estiloBorda, keyboardType: TextInputType.emailAddress),
+                _buildTextField('E-mail', estiloBorda, controller: _emailController, keyboardType: TextInputType.emailAddress),
                 const SizedBox(height: 16),
 
-                _buildTextField('Telefone', estiloBorda, hint: '(00) 00000-0000', keyboardType: TextInputType.number),
+                _buildTextField('Telefone (Opcional)', estiloBorda, controller: _telefoneController, hint: '(00) 00000-0000', keyboardType: TextInputType.number),
                 const SizedBox(height: 16),
 
-                _buildTextField('Nome da Oficina', estiloBorda),
+                _buildTextField('CPF', estiloBorda, controller: _cpfController, hint: 'Apenas números (11 dígitos)', keyboardType: TextInputType.number),
                 const SizedBox(height: 16),
 
-                _buildTextField('CNPJ', estiloBorda, hint: '00.000.000/0000-00', keyboardType: TextInputType.number),
+                _buildTextField('Senha', estiloBorda, controller: _senhaController, obscure: true),
                 const SizedBox(height: 16),
 
-                _buildTextField('Senha', estiloBorda, obscure: true),
-                const SizedBox(height: 16),
-
-                _buildTextField('Confirmar senha', estiloBorda, obscure: true),
+                _buildTextField('Confirmar senha', estiloBorda, controller: _confirmarSenhaController, obscure: true),
                 const SizedBox(height: 24),
 
                 RichText(
@@ -79,23 +150,20 @@ class TelaCadastro extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => TelaPrincipal()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(200, 48), // Largura fixa ou controlada pelo SizedBox pai
-                    backgroundColor: const Color(0xFFD9D9D9),
-                    shape: const StadiumBorder(), // Deixa o botão com bordas arredondadas
-                  ),
-                  child: const Text(
-                    'Criar conta',
-                    style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                  ),
-                ),
+                _estaCarregando
+                    ? const CircularProgressIndicator(color: Color(0xFF1E40AF))
+                    : ElevatedButton(
+                        onPressed: _executarCadastro,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(200, 48),
+                          backgroundColor: const Color(0xFF1E40AF),
+                          shape: const StadiumBorder(),
+                        ),
+                        child: const Text(
+                          'Criar conta',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
               ],
             ),
           ),
@@ -104,16 +172,23 @@ class TelaCadastro extends StatelessWidget {
     );
   }
 
-  // Função auxiliar para não repetir código de TextFormField
-  Widget _buildTextField(String label, OutlineInputBorder border, {bool obscure = false, String? hint, TextInputType? keyboardType}) {
+  Widget _buildTextField(
+    String label, 
+    OutlineInputBorder border, {
+    required TextEditingController controller,
+    bool obscure = false, 
+    String? hint, 
+    TextInputType? keyboardType,
+  }) {
     return TextFormField(
+      controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         filled: true,
-        fillColor: const Color(0xFFE5E7EB), // Cor de fundo cinza clara
+        fillColor: const Color(0xFFE5E7EB),
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1)),

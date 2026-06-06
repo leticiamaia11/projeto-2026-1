@@ -24,9 +24,9 @@ class RegistroServico {
       id: map['id'],
       descricao: map['descricao'] ?? '',
       valor: (map['valor'] as num? ?? 0.0).toDouble(),
-      dataInformada: map['data'] != null ? DateTime.parse(map['data']) : null,
-      placaVeiculo: map['placaVeiculo'] ?? '',
-      duracaoEmHoras: map['duracaoEmHoras'] ?? 0,
+      dataInformada: map['data_servico'] != null ? DateTime.parse(map['data_servico']) : null,
+      placaVeiculo: map['placa_veiculo'] ?? '',
+      duracaoEmHoras: map['duracao_horas'] ?? 0,
       concluido: map['concluido'] ?? false,
     );
   }
@@ -36,9 +36,9 @@ class RegistroServico {
       if (id != null) 'id': id,
       'descricao': descricao,
       'valor': valor,
-      'data': data.toIso8601String(),
-      'placaVeiculo': placaVeiculo,
-      'duracaoEmHoras': duracaoEmHoras,
+      'data_servico': data.toIso8601String(),
+      'placa_veiculo': placaVeiculo,
+      'duracao_horas': duracaoEmHoras,
       'concluido': concluido,
     };
   }
