@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:projeto_integrador/view/cadastro_veiculo.dart';
 import 'package:projeto_integrador/view/servicos.dart';
 import 'package:projeto_integrador/controllers/perfil_cliente_controller.dart';
-import 'package:projeto_integrador/controllers/servico_controller.dart'; // Importado
-import 'package:projeto_integrador/controllers/veículo_controller.dart'; // Importado se necessário para inicializar
-import 'package:intl/intl.dart'; // Importado para formatar a data na listagem
+import 'package:projeto_integrador/controllers/servico_controller.dart'; 
+import 'package:projeto_integrador/controllers/veículo_controller.dart'; 
+import 'package:projeto_integrador/controllers/cliente_controller.dart'; // IMPORTADO: Necessário para o cadastro do veículo funcionar
+import 'package:intl/intl.dart'; 
 
 class PerfilCliente extends StatefulWidget {
   final Map<String, dynamic> cliente;
@@ -16,7 +17,8 @@ class PerfilCliente extends StatefulWidget {
 
 class _PerfilClienteState extends State<PerfilCliente> {
   late PerfilClienteController _controller;
-  late ServicoController _servicoCtrl; // Declarado para resolver o erro de escopo
+  late ServicoController _servicoCtrl; 
+  late ClienteController _clienteCtrl; // DECLARADO: Para gerenciar o fluxo do dropdown de veículos
   bool _carregando = true;
 
   @override
@@ -24,9 +26,11 @@ class _PerfilClienteState extends State<PerfilCliente> {
     super.initState();
     _controller = PerfilClienteController(cliente: widget.cliente);
     
-    // Inicializa os controllers necessários para cumprir o requisito do construtor da TelaServicos
     final veiculoCtrlGenerico = VeiculoController(); 
     _servicoCtrl = ServicoController(veiculoController: veiculoCtrlGenerico);
+    
+    // CORREÇÃO: Inicializa o controlador exigido pela tela de cadastro de veículos
+    _clienteCtrl = ClienteController(veiculoController: veiculoCtrlGenerico);
     
     _carregarInformacoes();
   }
@@ -62,8 +66,8 @@ class _PerfilClienteState extends State<PerfilCliente> {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.pop(context); // Fecha o modal
-                setState(() => _carregando = true); // Ativa o indicador de progresso
+                Navigator.pop(context); 
+                setState(() => _carregando = true); 
 
                 bool sucesso = await _controller.deletarVeiculoDoBanco(veiculo);
 
@@ -72,8 +76,9 @@ class _PerfilClienteState extends State<PerfilCliente> {
                   
                   if (sucesso) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(backgroundColor: Colors.green, content: Text("Veículo deletedo com sucesso do banco!")),
+                      const SnackBar(backgroundColor: Colors.green, content: Text("Veículo deletado com sucesso do banco!")),
                     );
+                    _carregarInformacoes(); // Recarrega a tela local após deletar com sucesso
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(backgroundColor: Colors.redAccent, content: Text("Falha ao deletar o veículo.")),
@@ -203,7 +208,13 @@ class _PerfilClienteState extends State<PerfilCliente> {
                     alignment: Alignment.centerRight,
                     child: TextButton.icon(
                       onPressed: () async {
-                        await Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaCadastroVeiculo()));
+                        // CORREÇÃO: Passando o clienteController exigido e removendo o "const" que causava erro
+                        await Navigator.push(
+                          context, 
+                          MaterialPageRoute(
+                            builder: (_) => TelaCadastroVeiculo(clienteController: _clienteCtrl),
+                          ),
+                        );
                         _carregarInformacoes(); // Recarrega os dados reais após cadastrar
                       },
                       icon: const Text('Adicionar veículo', style: TextStyle(color: Colors.grey)),
@@ -259,7 +270,6 @@ class _PerfilClienteState extends State<PerfilCliente> {
                     alignment: Alignment.centerRight,
                     child: TextButton.icon(
                       onPressed: () async {
-                        // Navega e aguarda o pop retornar um resultado (se sucesso == true)
                         final atualizado = await Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -268,7 +278,7 @@ class _PerfilClienteState extends State<PerfilCliente> {
                         );
                         
                         if (atualizado == true) {
-                          _carregarInformacoes(); // Recarrega os dados do Supabase imediatamente
+                          _carregarInformacoes(); 
                         }
                       },
                       icon: const Text('Adicionar serviço', style: TextStyle(color: Colors.grey)),

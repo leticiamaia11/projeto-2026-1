@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-
-// Importando os arquivos com base na estrutura de pastas (views -> controllers/models)
 import '../controllers/cliente_controller.dart';
 import '../controllers/veículo_controller.dart'; 
 import '../models/cliente.dart';
 
 class TelaCadastroCliente extends StatefulWidget {
-  const TelaCadastroCliente({super.key});
+  // CORREÇÃO: Agora a tela exige receber o controlador ativo vindo da listagem
+  final ClienteController clienteController;
+
+  const TelaCadastroCliente({
+    super.key,
+    required this.clienteController,
+  });
 
   @override
   State<TelaCadastroCliente> createState() => _TelaCadastroClienteState();
@@ -18,8 +22,8 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
   // O Grampo da pasta (Chave do formulário)
   final _formKey = GlobalKey<FormState>();
 
-  // O Gerente da Oficina (Conexão com o Controller)
-  final ClienteController _clienteCtrl = ClienteController(veiculoController: VeiculoController());
+  // CORREÇÃO: O Gerente da Oficina agora usa o controlador compartilhado ("widget.clienteController")
+  // Apagada a linha antiga que criava um controlador do zero.
 
   // As Canetas Mágicas (Controllers para capturar o texto da tela)
   final _nomeCtrl = TextEditingController();
@@ -46,6 +50,13 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    // Não precisamos mais forçar carregarClientesDoBanco() aqui, 
+    // pois a tela anterior já cuidou disso!
+  }
+
+  @override
   void dispose() {
     // Limpando as canetas ao fechar a tela para não pesar a memória
     _nomeCtrl.dispose();
@@ -68,8 +79,8 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
       // Pegamos o CPF limpo (sem os pontos e traço da máscara) para mandar para o controller
       String cpfLimpo = mascaraCpf.getUnmaskedText();
 
-      // 2. Chama a lógica oficial conectada com o Supabase usando o await
-      bool sucesso = await _clienteCtrl.processarCadastroCliente(
+      // 2. CORREÇÃO: Chama o método usando o prefixo "widget." para acessar o controlador injetado
+      bool sucesso = await widget.clienteController.processarCadastroCliente(
         nome: _nomeCtrl.text,
         cpf: cpfLimpo, 
         telefone: _telefoneCtrl.text,
@@ -94,7 +105,7 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
         );
         Navigator.pop(context); // Retorna com sucesso para a tela de listagem atualizada
       } else {
-        // Se cair aqui, é porque a trava de CPF foi acionada ou houve falha de conexão
+        // Se cai aqui, é porque a trava de CPF foi acionada ou houve falha de conexão
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Erro: Este CPF já está registrado ou os dados são inválidos.'),

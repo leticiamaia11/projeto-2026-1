@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:projeto_integrador/controllers/usuario_controller.dart';
 import 'package:projeto_integrador/tela_principal.dart';
+import 'package:projeto_integrador/tela_splash.dart';
 
 class TelaLogin extends StatefulWidget {
   const TelaLogin({super.key});
@@ -92,7 +93,10 @@ class _TelaLoginState extends State<TelaLogin> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1E40AF)),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TelaSplash()), ///////// REQUISITO ATENDIDO: Voltar para a tela de splash ao invés de fechar o app
+          ),
         ),
       ),
       body: Center(

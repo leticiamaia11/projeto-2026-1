@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:projeto_integrador/view/cadastro_cliente.dart';
 import 'package:projeto_integrador/controllers/agendamento_controller.dart';
+import 'package:projeto_integrador/controllers/cliente_controller.dart'; 
+import 'package:projeto_integrador/controllers/veículo_controller.dart'; 
 
 class TelaAgendamento extends StatefulWidget {
   const TelaAgendamento({super.key});
@@ -11,7 +13,34 @@ class TelaAgendamento extends StatefulWidget {
 
 class _TelaAgendamentoState extends State<TelaAgendamento> {
   final AgendamentoController _controller = AgendamentoController();
-  bool _carregando = false; // Controla o feedback visual de salvamento
+  late ClienteController _clienteCtrl; // DECLARADO: Para buscar os dados reais do banco
+  
+  List<dynamic> _clientesDoBanco = []; // Armazena a lista de clientes cadastrados no banco
+  bool _carregando = false; 
+  bool _carregandoClientes = true; // Controla o loading inicial dos chips de clientes
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializa o controller injetando a dependência do veículo
+    _clienteCtrl = ClienteController(veiculoController: VeiculoController());
+    _buscarClientesReais();
+  }
+
+  /// Busca os clientes salvos no Supabase para renderizar na tela
+  Future<void> _buscarClientesReais() async {
+    setState(() => _carregandoClientes = true);
+    try {
+      // Supondo que seu controller tenha um método de carregar semelhante a este:
+      await _clienteCtrl.carregarClientesDoBanco(); 
+      _clientesDoBanco = _clienteCtrl.listaDeClientes; // Atualiza a lista local da view
+    } catch (e) {
+      print("Erro ao carregar clientes para o agendamento: $e");
+    }
+    if (mounted) {
+      setState(() => _carregandoClientes = false);
+    }
+  }
 
   void _showDatePicker() async {
     final DateTime? selectedDate = await showDatePicker(
@@ -70,7 +99,6 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
     }
   }
 
-  // Mudado para ASYNC para aguardar as respostas reais do Banco de Dados
   void _validarEProcessarAgendamento() async {
     if (!_controller.formKey.currentState!.validate()) return;
 
@@ -81,9 +109,8 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
       return;
     }
 
-    setState(() => _carregando = true); // Ativa o loading na tela
+    setState(() => _carregando = true); 
 
-    // 1. FLUXO ALTERNATIVO: Aguarda validação assíncrona de conflito vinda do Banco
     bool existeConflito = await _controller.verificarConflitoHorarioNoBanco();
     if (existeConflito) {
       setState(() => _carregando = false);
@@ -96,9 +123,8 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
       return;
     }
 
-    // 2. FLUXO ALTERNATIVO: Aguarda verificação de histórico do cliente no Banco
     bool clienteJaTemServico = await _controller.clienteJaPossuiAgendamentoNoBanco();
-    setState(() => _carregando = false); // Desativa antes de abrir o modal
+    setState(() => _carregando = false); 
 
     if (clienteJaTemServico) {
       _mostrarAlertaClienteRepetido();
@@ -130,7 +156,6 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
     );
   }
 
-  // Envia a ordem de gravação final e monitora o sucesso da operação na nuvem/rede
   void _concluirAgendamento() async {
     setState(() => _carregando = true);
     
@@ -234,28 +259,45 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E40AF)),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildClientChip("Emily", "Celta - ABC1234", Colors.purple),
-                      _buildClientChip("Letícia", "Onix - ABC0000", Colors.green),
-                      _buildClientChip("Thayná", "Gol - ABC1111", Colors.blue),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const TelaCadastroCliente()),
-                          );
-                        },
-                        child: const Text("+ Adicionar", style: TextStyle(color: Color(0xFF1E40AF))),
-                      ),
-                    ],
-                  ),
+                  
+                  // LISTAGEM DINÂMICA INTEGRADA WITH THE DATABASE
+                  _carregandoClientes
+                      ? const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator(color: Color(0xFF1E40AF))))
+                      : _clientesDoBanco.isEmpty
+                          ? const Text("Nenhum cliente cadastrado no banco.", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
+                          : Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                ..._clientesDoBanco.map((cliente) {
+                                  // Se o seu objeto for um Model de Cliente adaptado, use propriedades ponto (ex: cliente.nome)
+                                  // Se for um Map bruto vindo do Supabase, use colchetes como abaixo:
+                                  // CORREÇÃO: Ajustado para usar .nomeCompleto em vez de .nome se o cast falhar
+                                  final String nome = cliente is Map ? (cliente['nome'] ?? '') : (cliente.nomeCompleto ?? '');
+                                  final String veiculo = cliente is Map ? (cliente['veiculo'] ?? 'Sem veículo') : (cliente.veiculoInfo ?? 'Sem veículo');
+                                  
+                                  return _buildClientChip(nome, veiculo, const Color(0xFF1E40AF));
+                                }),
+                                
+                                TextButton(
+                                  onPressed: () async {
+                                    // Aguarda o cadastro fechar para recarregar a lista do banco em tempo real
+                                    await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => TelaCadastroCliente(clienteController: _clienteCtrl),
+                                      ),
+                                    );
+                                    _buscarClientesReais(); // Atualiza a listagem ao voltar
+                                  },
+                                  child: const Text("+ Adicionar", style: TextStyle(color: Color(0xFF1E40AF))),
+                                ),
+                              ],
+                            ),
                   const SizedBox(height: 32),
                   Center(
                     child: _carregando
-                        ? const CircularProgressIndicator(color: Color(0xFF1E40AF)) // Carregamento visual para rede lenta
+                        ? const CircularProgressIndicator(color: Color(0xFF1E40AF))
                         : ElevatedButton(
                             onPressed: _validarEProcessarAgendamento,
                             style: ElevatedButton.styleFrom(

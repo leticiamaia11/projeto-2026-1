@@ -168,11 +168,14 @@ class _ListaClientesState extends State<ListaClientes> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // Abre a tela de cadastro e, quando o usuário voltar, recarrega a lista do Supabase
+          // Passamos a instância do controller ativo nesta tela para a tela de cadastro
           await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const TelaCadastroCliente()),
+            MaterialPageRoute(
+              builder: (_) => TelaCadastroCliente(clienteController: _clienteController),
+            ),
           );
+          // Recarrega e força a atualização visual imediata ao voltar
           _inicializarLista();
         },
         backgroundColor: const Color(0xFF1E40AF),

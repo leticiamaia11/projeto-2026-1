@@ -55,7 +55,7 @@ class UsuarioController {
     try {
       // Verifica se o e-mail ou CPF já existem na tabela 'usuarios'
       final checkExist = await supabase
-          .from('usuarios')
+          .from('usuario')
           .select('id')
           .or('email.eq.$email,cpf.eq.$cpf')
           .maybeSingle();
@@ -68,7 +68,7 @@ class UsuarioController {
       var novoUsuario = Usuario(nome: nome, email: email, senha: senha, cpf: cpf);
 
       // Insere na tabela do Supabase
-      await supabase.from('usuarios').insert(novoUsuario.toMap());
+      await supabase.from('usuario').insert(novoUsuario.toMap());
 
       return null; // Retornar null indica que não houve erros! Sucesso absoluto.
       
@@ -99,9 +99,9 @@ class UsuarioController {
     }
 
     try {
-      // Busca na tabela 'usuarios' se existe alguém com este CPF e Senha
+      // Busca na tabela 'usuario' se existe alguém com este CPF e Senha
       final resultado = await supabase
-          .from('usuarios')
+          .from('usuario')
           .select()
           .eq('cpf', cpf)
           .eq('senha', senha) // Em produção, lembre-se de comparar hashes criptografados!
@@ -144,9 +144,9 @@ class UsuarioController {
       final usuarioAtual = supabase.auth.currentUser;
       
       if (usuarioAtual != null && usuarioAtual.email != null) {
-        // Busca o nome correspondente na tabela 'usuarios' usando o e-mail da sessão
+        // Busca o nome correspondente na tabela 'usuario' usando o e-mail da sessão
         final dados = await supabase
-            .from('usuarios')
+            .from('usuario')
             .select('nome')
             .eq('email', usuarioAtual.email!)
             .maybeSingle();

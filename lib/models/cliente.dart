@@ -2,7 +2,7 @@ import 'veiculo.dart';
 
 class Cliente {
   // Campos Obrigatórios
-  int? id; /////////////////////////////
+  String? id; /////////////////////////////
   String nomeCompleto;
   String cpf;
   String telefone;

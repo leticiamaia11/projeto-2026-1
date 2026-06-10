@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:projeto_integrador/controllers/usuario_controller.dart';
 import 'package:projeto_integrador/tela_principal.dart';
 
@@ -18,9 +20,23 @@ class _TelaCadastroState extends State<TelaCadastro> {
   final TextEditingController _telefoneController = TextEditingController();
   final TextEditingController _cpfController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
-  final TextEditingController _confirmarSenhaController = TextEditingController();
+  final TextEditingController _confirmarSenhaController =
+      TextEditingController();
 
   bool _estaCarregando = false;
+
+  // UX: Filtros de Proteção (Máscaras de preenchimento idênticas à tela de cliente)
+  var mascaraCpf = MaskTextInputFormatter(
+    mask: '###.###.###-##',
+    filter: {"#": RegExp(r'[0-9]')},
+    type: MaskAutoCompletionType.lazy,
+  );
+
+  var mascaraTelefone = MaskTextInputFormatter(
+    mask: '(##) #####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+    type: MaskAutoCompletionType.lazy,
+  );
 
   @override
   void dispose() {
@@ -47,8 +63,10 @@ class _TelaCadastroState extends State<TelaCadastro> {
       email: _emailController.text.trim(),
       senha: _senhaController.text,
       confirmarSenha: _confirmarSenhaController.text,
-      cpfBruto: _cpfController.text,
+      cpfBruto: mascaraCpf.getUnmaskedText(), // Captura apenas os números limpos do CPF
     );
+
+    //String? mensagemErro = null; // REMOVER ESTA LINHA APÓS IMPLEMENTAR O MÉTODO DE CADASTRO NO CONTROLLER
 
     setState(() {
       _estaCarregando = false;
@@ -58,7 +76,7 @@ class _TelaCadastroState extends State<TelaCadastro> {
     if (mensagemErro == null) {
       // FLUXO PRINCIPAL: Sucesso
       _mostrarSnackBar('Cadastro concluído com sucesso!', Colors.green);
-      
+
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -74,7 +92,10 @@ class _TelaCadastroState extends State<TelaCadastro> {
   void _mostrarSnackBar(String mensagem, Color cor) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensagem, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(
+          mensagem,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: cor,
         duration: const Duration(seconds: 3),
       ),
@@ -94,7 +115,10 @@ class _TelaCadastroState extends State<TelaCadastro> {
         centerTitle: true,
         title: const Text(
           'Crie sua conta',
-          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF1E40AF),
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -111,29 +135,64 @@ class _TelaCadastroState extends State<TelaCadastro> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildTextField('Nome completo', estiloBorda, controller: _nomeController),
-                const SizedBox(height: 16),
-                
-                _buildTextField('E-mail', estiloBorda, controller: _emailController, keyboardType: TextInputType.emailAddress),
-                const SizedBox(height: 16),
-
-                _buildTextField('Telefone (Opcional)', estiloBorda, controller: _telefoneController, hint: '(00) 00000-0000', keyboardType: TextInputType.number),
+                _buildTextField(
+                  'Nome completo',
+                  estiloBorda,
+                  controller: _nomeController,
+                ),
                 const SizedBox(height: 16),
 
-                _buildTextField('CPF', estiloBorda, controller: _cpfController, hint: 'Apenas números (11 dígitos)', keyboardType: TextInputType.number),
+                _buildTextField(
+                  'E-mail',
+                  estiloBorda,
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                ),
                 const SizedBox(height: 16),
 
-                _buildTextField('Senha', estiloBorda, controller: _senhaController, obscure: true),
+                _buildTextField(
+                  'Telefone (Opcional)',
+                  estiloBorda,
+                  controller: _telefoneController,
+                  hint: '(00) 00000-0000',
+                  inputFormatters: [mascaraTelefone], // Vincula a máscara de telefone
+                  keyboardType: TextInputType.number,
+                ),
                 const SizedBox(height: 16),
 
-                _buildTextField('Confirmar senha', estiloBorda, controller: _confirmarSenhaController, obscure: true),
+                _buildTextField(
+                  'CPF',
+                  estiloBorda,
+                  controller: _cpfController,
+                  hint: '000.000.000-00',
+                  inputFormatters: [mascaraCpf], // Vincula a máscara de CPF
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+
+                _buildTextField(
+                  'Senha',
+                  estiloBorda,
+                  controller: _senhaController,
+                  obscure: true,
+                ),
+                const SizedBox(height: 16),
+
+                _buildTextField(
+                  'Confirmar senha',
+                  estiloBorda,
+                  controller: _confirmarSenhaController,
+                  obscure: true,
+                ),
                 const SizedBox(height: 24),
 
                 RichText(
                   text: TextSpan(
                     style: const TextStyle(color: Colors.black54, fontSize: 14),
                     children: [
-                      const TextSpan(text: 'Ao criar uma conta, você aceita os '),
+                      const TextSpan(
+                        text: 'Ao criar uma conta, você aceita os ',
+                      ),
                       TextSpan(
                         text: 'termos e condições',
                         style: const TextStyle(
@@ -161,7 +220,10 @@ class _TelaCadastroState extends State<TelaCadastro> {
                         ),
                         child: const Text(
                           'Criar conta',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
               ],
@@ -173,17 +235,19 @@ class _TelaCadastroState extends State<TelaCadastro> {
   }
 
   Widget _buildTextField(
-    String label, 
+    String label,
     OutlineInputBorder border, {
     required TextEditingController controller,
-    bool obscure = false, 
-    String? hint, 
+    bool obscure = false,
+    String? hint,
+    List<dynamic>? inputFormatters, // Suporte para listas de formatação de texto
     TextInputType? keyboardType,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters?.cast<TextInputFormatter>(), // Converte de forma segura os formatadores
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -191,8 +255,13 @@ class _TelaCadastroState extends State<TelaCadastro> {
         fillColor: const Color(0xFFE5E7EB),
         border: border,
         enabledBorder: border,
-        focusedBorder: border.copyWith(borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        focusedBorder: border.copyWith(
+          borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
       ),
     );
   }

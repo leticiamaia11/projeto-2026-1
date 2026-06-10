@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:projeto_integrador/controllers/veículo_controller.dart';
+import 'package:projeto_integrador/controllers/cliente_controller.dart'; // IMPORTADO: Necessário para instanciar o controller
 import 'package:projeto_integrador/models/veiculo.dart';
 import 'package:projeto_integrador/view/cadastro_veiculo.dart';
 import 'package:projeto_integrador/view/perfil_cliente.dart';
@@ -15,6 +16,9 @@ class _ListaVeiculosState extends State<ListaVeiculos> {
   // Substituído a lista estática pelo seu Controller Oficial
   final VeiculoController _veiculoCtrl = VeiculoController();
 
+  // CORREÇÃO: Criada a instância do ClienteController necessária para abastecer a tela de cadastro
+  final ClienteController _clienteCtrl = ClienteController(veiculoController: VeiculoController());
+
   List<Veiculo> _veiculosExibidos = [];
   bool _estaCarregando = true;
 
@@ -28,8 +32,6 @@ class _ListaVeiculosState extends State<ListaVeiculos> {
   Future<void> _carregarDadosDoBanco() async {
     setState(() => _estaCarregando = true);
     
-    // Supondo que seu VeiculoController tenha um método para buscar do banco semelhante ao de cliente:
-    // Se o seu método tiver outro nome (ex: listarTodos), basta ajustar aqui embaixo.
     try {
       // Carrega os dados para a listaDeVeiculos interna do seu controller
       await _veiculoCtrl.carregarVeiculosDoBanco(); 
@@ -216,11 +218,15 @@ class _ListaVeiculosState extends State<ListaVeiculos> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // Quando o usuário voltar de salvar um veículo novo, atualiza a lista da nuvem
+          // CORREÇÃO: Nome do parâmetro corrigido e passando a instância correta gerenciada pela tela
           await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const TelaCadastroVeiculo()),
+            MaterialPageRoute(
+              builder: (_) => TelaCadastroVeiculo(clienteController: _clienteCtrl),
+            ),
           );
+          
+          // Quando o usuário volta do cadastro, recarrega a lista do banco de dados na tela
           _carregarDadosDoBanco();
         },
         backgroundColor: const Color(0xFF1E40AF),
