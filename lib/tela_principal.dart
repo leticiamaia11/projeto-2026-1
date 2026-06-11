@@ -8,7 +8,7 @@ import 'package:projeto_integrador/view/lista_clientes.dart';
 import 'package:projeto_integrador/view/lista_veiulos.dart'; 
 import 'package:projeto_integrador/view/agendamento.dart';
 import 'package:projeto_integrador/view/servicos.dart';
-import 'package:projeto_integrador/view/relatorio_financeiro.dart'; // 🟢 Verificado o nome do arquivo
+import 'package:projeto_integrador/view/relatorio_financeiro.dart'; 
 import 'package:projeto_integrador/view/historico_servicos.dart';
 import 'package:projeto_integrador/view/calendario.dart';
 
@@ -170,7 +170,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: GridView.count(
                 shrinkWrap: true, 
-                physics: const NeverScrollableScrollPhysics(), // Evita conflitos de rolagem dentro do SingleChildScrollView
+                physics: const NeverScrollableScrollPhysics(), 
                 crossAxisCount: 3, 
                 crossAxisSpacing: 15, 
                 mainAxisSpacing: 15, 
@@ -183,7 +183,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                   BotaoMenu(
                     label: 'Veículos',
                     icon: Icons.directions_car_filled_outlined,
-                    onTap: () => _navegar(context, const ListaVeiculos()), //  Corrigido o nome da classe da View externa
+                    onTap: () => _navegar(context, const ListaVeiculos()), 
                   ),
                   BotaoMenu(
                     label: 'Agendar',
@@ -198,16 +198,19 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                   BotaoMenu(
                     label: 'Relatório',
                     icon: Icons.attach_money_outlined,
-                    // Injetados os controllers obrigatórios exigidos pela TelaRelatorio
                     onTap: () => _navegar(context, TelaRelatorio(servicoController: _servicoCtrl, veiculoController: _veiculoCtrl)),
                   ),
+                  // 🟢 CORRIGIDO: Agora aponta perfeitamente para a nossa TelaHistorico atualizada com os dois controllers compartilhados
                   BotaoMenu(
                     label: 'Histórico',
                     icon: Icons.access_time_outlined,
                     onTap: () => _navegar(
-    context, 
-   const TelaHistorico(
-      veiculo: {})), // Corrigido o nome da classe da View externa
+                      context, 
+                      TelaHistorico(
+                        servicoController: _servicoCtrl,
+                        veiculoController: _veiculoCtrl,
+                      ),
+                    ), 
                   ),
                 ],
               ),
@@ -224,10 +227,7 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   }
 }
 
-//===============================================================================
-//                          COMPONENTES AUXILIARES
-//===============================================================================
-
+// [Os componentes auxiliares BotaoMenu, DiaCalendario e CardDia permanecem os mesmos abaixo...]
 class BotaoMenu extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -252,7 +252,7 @@ class BotaoMenu extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: Colors.white), // Reduzido levemente de 50 para 40 para evitar overflow em telas menores
+            Icon(icon, size: 40, color: Colors.white), 
             const SizedBox(height: 8),
             Text(
               label,

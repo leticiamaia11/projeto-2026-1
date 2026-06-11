@@ -8,40 +8,41 @@ class ServicoController {
   final VeiculoController veiculoController;
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  // 🟢 AS DUAS LISTAS QUE A TELA DE RELATÓRIO EXIGE:
+  // Listas fortemente tipadas como objetos (Perfeito para o Relatório)
   List<RegistroServico> historicoGlobal = [];
-  List<Map<String, dynamic>> listaDeGastos = []; // Gastos/Saídas mapeados em tabelas
+  List<Gasto> listaDeGastos = []; 
 
   ServicoController({required this.veiculoController});
 
-  /// 🟢 NOVO MÉTODO: Busca os dados de Ganhos e Gastos do Supabase para alimentar o Relatório
+  /// Busca e converte os dados do Supabase em Objetos do Modelo
   Future<void> buscarDadosParaRelatorio() async {
     try {
-      // 1. Busca todos os serviços (Ganhos/Entradas)
+      // 1. Apontando para 'registro_servicos' e ordenando por 'data'
       final dadosServicos = await _supabase
-          .from('servicos')
+          .from('registro_servicos')
           .select()
-          .order('data_servico', ascending: false);
+          .order('data', ascending: false);
 
-      // Converte as linhas do banco de volta para objetos do seu modelo RegistroServico
       historicoGlobal = List<Map<String, dynamic>>.from(dadosServicos)
-          .map((mapa) => RegistroServico.fromMap(mapa)) // Certifique-se de ter o 'fromMap' no seu modelo
+          .map((mapa) => RegistroServico.fromMap(mapa)) 
           .toList();
 
-      // 2. Busca todas as saídas financeiras (Gastos/Saídas)
+      // 2. Busca todos os gastos apontando para a tabela 'gasto'
       final dadosGastos = await _supabase
-          .from('saidas_financeiras') // Nome fictício da sua tabela de gastos, ajuste se necessário
+          .from('gasto') 
           .select()
-          .order('data_gasto', ascending: false);
+          .order('data', ascending: false);
 
-      listaDeGastos = List<Map<String, dynamic>>.from(dadosGastos);
+      listaDeGastos = List<Map<String, dynamic>>.from(dadosGastos)
+          .map((mapa) => Gasto.fromMap(mapa))
+          .toList();
 
     } catch (e) {
       debugPrint("Erro ao buscar dados do relatório: $e");
     }
   }
 
-  // Método para persistir de verdade no banco de dados Supabase
+  /// Insere o serviço vinculando o UUID do veículo e usando a tabela 'registro_servicos'
   Future<bool> adicionarServico({
     required String placa,
     required String descricao,
@@ -50,9 +51,10 @@ class ServicoController {
     required DateTime dataServico,
   }) async {
     try {
+      // 1. Faz uma busca na tabela veiculos para achar o 'id' (UUID) correspondente à placa
       final veiculoExistente = await _supabase
           .from('veiculos')
-          .select()
+          .select('id')
           .eq('placa', placa)
           .maybeSingle();
 
@@ -61,6 +63,9 @@ class ServicoController {
         return false;
       }
 
+      final String uuidVeiculo = veiculoExistente['id'];
+
+      // 2. Instancia o modelo passando o veiculoId populado
       var novoServico = RegistroServico(
         descricao: descricao,
         valor: valor,
@@ -68,9 +73,14 @@ class ServicoController {
         duracaoEmHoras: duracao,
         dataInformada: dataServico,
         concluido: true,
+        veiculoId: uuidVeiculo,
       );
 
-      await _supabase.from('servicos').insert(novoServico.toMap());
+      // 3. Insere na tabela correta do banco ('registro_servicos')
+      await _supabase.from('registro_servicos').insert(novoServico.toMap());
+      
+      // Atualiza a lista local em memória
+      historicoGlobal.insert(0, novoServico);
       return true;
       
     } catch (e) {
@@ -79,17 +89,22 @@ class ServicoController {
     }
   }
 
+  /// 🟢 AJUSTADO: Agora salvando na tabela correta 'gasto' sem renomear a data
   Future<bool> adicionarGasto(Gasto gasto) async {
-  try {
-    // Altere 'saidas_financeiras' para o nome exato da sua tabela de gastos no Supabase
-    await _supabase.from('saidas_financeiras').insert(gasto.toMap());
-    
-    // Atualiza a lista local em memória para que o relatório mude instantaneamente
-    listaDeGastos.add(gasto.toMap()); 
-    return true;
-  } catch (e) {
-    debugPrint("Erro ao registrar saída financeira no Supabase: $e");
-    return false;
+    try {
+      // Converte o objeto para Mapa. Como a tabela se chama 'gasto' e a 
+      // coluna é 'data', o toMap() original do seu Gasto já encaixa perfeitamente!
+      final mapaGasto = gasto.toMap();
+
+      // Gravando na tabela correta informada na foto: 'gasto'
+      await _supabase.from('gasto').insert(mapaGasto);
+      
+      // Atualiza a lista local em memória inserindo o Objeto completo
+      listaDeGastos.add(gasto); 
+      return true;
+    } catch (e) {
+      debugPrint("Erro ao registrar saída financeira no Supabase: $e");
+      return false;
+    }
   }
-}
 }

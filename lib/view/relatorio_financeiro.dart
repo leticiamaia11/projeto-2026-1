@@ -3,7 +3,9 @@ import 'package:projeto_integrador/controllers/servico_controller.dart';
 import 'package:projeto_integrador/view/saida_financeira.dart';
 import 'package:projeto_integrador/view/servicos.dart'; 
 import 'package:projeto_integrador/controllers/veículo_controller.dart'; 
-import '../models/registroServico.dart'; // Importação necessária para reconhecer o tipo do modelo
+import '../models/registroServico.dart'; 
+// IMPORTANTE: Importando o modelo de Gasto fornecido
+import '../models/gasto.dart'; 
 
 class TelaRelatorio extends StatefulWidget {
   final ServicoController servicoController;
@@ -37,13 +39,20 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
     setState(() => _carregandoDoBanco = false);
   }
 
-  // 🟢 Tratamento dinâmico para diferenciar Objeto de Mapa no filtro de data
+  // 🟢 Tratamento dinâmico adaptado para reconhecer instâncias de RegistroServico e Gasto
   List<dynamic> _filtrarPorPeriodo(List<dynamic> lista) {
     final agora = DateTime.now();
     return lista.where((item) {
-      final DateTime dataItem = item is RegistroServico 
-          ? item.data 
-          : DateTime.parse((item['data_gasto'] ?? item['data'] ?? agora.toString()).toString());
+      DateTime dataItem;
+
+      if (item is RegistroServico) {
+        dataItem = item.data;
+      } else if (item is Gasto) {
+        dataItem = item.data;
+      } else {
+        // Fallback de segurança caso algum mapa solto passe pela listagem
+        dataItem = DateTime.parse((item['data_gasto'] ?? item['data'] ?? agora.toString()).toString());
+      }
           
       final diferencaDias = agora.difference(dataItem).inDays;
 
@@ -99,9 +108,18 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
     final listaGastosFiltrados = _filtrarPorPeriodo(listaGastosRaw);
     final listaServicosFiltrados = _filtrarPorPeriodo(listaServicosRaw);
 
-    // 🟢 Acumuladores protegidos contra divergência de tipos
-    double totalFaturado = listaServicosFiltrados.fold(0.0, (soma, item) => soma + (item is RegistroServico ? item.valor : double.parse((item['valor'] ?? 0.0).toString())));
-    double totalGastos = listaGastosFiltrados.fold(0.0, (soma, item) => soma + (item is RegistroServico ? item.valor : double.parse((item['valor'] ?? 0.0).toString())));
+    // 🟢 Acumuladores protegidos mapeando corretamente o objeto Gasto e RegistroServico
+    double totalFaturado = listaServicosFiltrados.fold(0.0, (soma, item) {
+      if (item is RegistroServico) return soma + item.valor;
+      return soma + double.parse((item['valor'] ?? 0.0).toString());
+    });
+
+    double totalGastos = listaGastosFiltrados.fold(0.0, (soma, item) {
+      if (item is Gasto) return soma + item.valor;
+      if (item is RegistroServico) return soma + item.valor;
+      return soma + double.parse((item['valor'] ?? 0.0).toString());
+    });
+
     double balancoTotal = totalFaturado - totalGastos;
 
     final listaExibida = _abaAtual == 'Gastos' ? listaGastosFiltrados : listaServicosFiltrados;
@@ -239,10 +257,20 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                             final item = listaExibida[index];
                             final isGasto = _abaAtual == 'Gastos';
                             
-                            // 🟢 Mapeamento seguro das propriedades dependendo do tipo da lista
-                            final String descricaoOriginal = isGasto ? (item['descricao'] ?? '').toString() : (item as RegistroServico).descricao;
-                            final double valorItem = isGasto ? double.parse((item['valor'] ?? 0.0).toString()) : (item as RegistroServico).valor;
-                            final DateTime dataItem = isGasto ? DateTime.parse((item['data_gasto'] ?? item['data'] ?? DateTime.now().toString()).toString()) : (item as RegistroServico).data;
+                            // 🟢 Mapeamento estrito usando as propriedades seguras da classe Gasto ou RegistroServico
+                            String descricaoOriginal = '';
+                            double valorItem = 0.0;
+                            DateTime dataItem = DateTime.now();
+
+                            if (isGasto && item is Gasto) {
+                              descricaoOriginal = item.descricao;
+                              valorItem = item.valor;
+                              dataItem = item.data;
+                            } else if (item is RegistroServico) {
+                              descricaoOriginal = item.descricao;
+                              valorItem = item.valor;
+                              dataItem = item.data;
+                            }
 
                             final String titulo = isGasto ? (descricaoOriginal.split(' - ').first) : descricaoOriginal;
                             final String subTitulo = isGasto ? (descricaoOriginal.contains(' - ') ? descricaoOriginal.split(' - ').last : '') : 'Serviço Concluído';
@@ -376,7 +404,7 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: const Color(0xFF1E40AF), size: 18), // Corrigido: Ícone azul sobre fundo branco
+            child: Icon(icon, color: const Color(0xFF1E40AF), size: 18), 
           ),
           const SizedBox(width: 8),
           Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
@@ -391,7 +419,7 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
       MaterialPageRoute(
         builder: (context) => TelaSaidaFinanceira(servicoController: widget.servicoController),
       ),
-    ).then((_) => _buscarDadosDoBanco()); // Atualiza buscando do banco novamente
+    ).then((_) => _buscarDadosDoBanco()); 
   }
 
   void _abrirTelaEntrada() {
@@ -400,7 +428,7 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
       MaterialPageRoute(
         builder: (context) => TelaServicos(servicoController: widget.servicoController),
       ),
-    ).then((_) => _buscarDadosDoBanco()); // Atualiza buscando do banco novamente
+    ).then((_) => _buscarDadosDoBanco()); 
   }
 
   String _obterNomeMes(int mes) {

@@ -195,7 +195,7 @@ class _ListaVeiculosState extends State<ListaVeiculos> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => PerfilCliente(
+                                        builder: (_) => PerfilCliente( 
                                           cliente: {
                                             'nome': veiculo.proprietario ?? '',
                                             'veiculo': '${veiculo.modelo} - ${veiculo.placa}',
@@ -203,6 +203,7 @@ class _ListaVeiculosState extends State<ListaVeiculos> {
                                             'telefone': '',
                                             'email': '',
                                           },
+                                          clienteController: _clienteCtrl, // Passa o controle adiante para manter a gestão de estado
                                         ),
                                       ),
                                     );

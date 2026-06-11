@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:projeto_integrador/models/agendamento.dart';
-// IMPORTANTE: Importe o seu serviço de banco de dados real aqui
-// import 'package:projeto_integrador/services/banco_service.dart';
 
 class CalendarioController {
-  // Guarda todos os agendamentos baixados do banco para o dia selecionado
+  final SupabaseClient _supabase = Supabase.instance.client;
   List<AgendamentoModel> agendamentosDoDiaSelecionado = [];
 
-  // Puxa os dados do banco filtrando pelo dia que o usuário clicou no TableCalendar
   Future<void> carregarAgendamentosDoBanco(DateTime dataFiltrada) async {
     try {
-      String dataStr = dataFiltrada.toIso8601String().split('T')[0]; // Formato YYYY-MM-DD para o banco
+      final DateTime inicioDia = DateTime(dataFiltrada.year, dataFiltrada.month, dataFiltrada.day, 0, 0, 0);
+      final DateTime fimDia = DateTime(dataFiltrada.year, dataFiltrada.month, dataFiltrada.day, 23, 59, 59);
 
-      // CRITÉRIO DE ACEITE: "Quando eu for visualizar um dia, mostra todos os horários cheios"
-      // Exemplo de busca real:
-      // final dadosBrutos = await BancoService.buscarPorData('agendamentos', dataStr);
-      // agendamentosDoDiaSelecionado = dadosBrutos.map((map) => AgendamentoModel.fromMap(map)).toList();
+      // 🟢 CORREÇÃO: Filtrando pela coluna real 'data' indicada no seu print
+      final dadosBrutos = await _supabase
+          .from('agendamentos')
+          .select()
+          .gte('data', inicioDia.toIso8601String())
+          .lte('data', fimDia.toIso8601String());
 
-      // NOTA: Ordene a lista por horário de início para ficar organizado na tela
+      agendamentosDoDiaSelecionado = List<Map<String, dynamic>>.from(dadosBrutos)
+          .map((map) => AgendamentoModel.fromMap(map))
+          .toList();
+
+      // Ordena por horário de início
       agendamentosDoDiaSelecionado.sort((a, b) {
         final aMinutos = a.inicio.hour * 60 + a.inicio.minute;
         final bMinutos = b.inicio.hour * 60 + b.inicio.minute;
@@ -25,17 +30,18 @@ class CalendarioController {
       });
     } catch (e) {
       debugPrint("Erro ao carregar os agendamentos do dia: $e");
+      agendamentosDoDiaSelecionado = [];
     }
   }
 
-  // FLUXO ALTERNATIVO: Solicitação e execução de exclusão no banco de dados
   Future<bool> deletarAgendamentoDoBanco(AgendamentoModel agendamento) async {
     try {
-      // Exemplo de exclusão real usando um identificador exclusivo (como ID ou combinação única)
-      // await BancoService.deletar('agendamentos', agendamento.id);
+      await _supabase
+          .from('agendamentos')
+          .delete()
+          .eq('id', agendamento.id); 
       
-      // Remove da lista local para atualizar a tela sem precisar recarregar tudo do banco
-      agendamentosDoDiaSelecionado.remove(agendamento);
+      agendamentosDoDiaSelecionado.removeWhere((item) => item.id == agendamento.id);
       return true;
     } catch (e) {
       debugPrint("Erro ao excluir agendamento: $e");

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+// Removido o mask_text_input_formatter que conflitava com decimais dinâmicos
 import 'package:projeto_integrador/controllers/servico_controller.dart';
-import 'package:projeto_integrador/models/gasto.dart'; // Importa o modelo correto da pasta models
+import 'package:projeto_integrador/models/gasto.dart'; 
 
 class TelaSaidaFinanceira extends StatefulWidget {
   final ServicoController servicoController;
@@ -22,13 +22,6 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
   final _valorCtrl = TextEditingController();
 
   DateTime? _dataSelecionada;
-
-  // UX: Filtro de Proteção Corrigido para Valores Decimais Monetários
-  var mascaraValor = MaskTextInputFormatter(
-    mask: '################', // Permite digitação livre de números
-    filter: {"#": RegExp(r'[0-9.,]')},
-    type: MaskAutoCompletionType.lazy,
-  );
 
   @override
   void dispose() {
@@ -67,46 +60,40 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
     }
   }
 
-  // Realiza a validação local e persiste no Supabase
   Future<void> _realizarRegistro() async {
     if (_formKey.currentState!.validate()) {
       
-      // Converte o texto digitado substituindo a vírgula por ponto para o double.parse
+      // Converte o texto substituindo a vírgula por ponto para o double.parse funcionar de forma segura
       final valorTratado = double.tryParse(_valorCtrl.text.replaceAll(',', '.')) ?? 0.0;
 
-      // Unifica o título e a descrição conforme regra de negócio anterior
+      // Mantém a regra de negócio de unificar Título - Descrição
       final descricaoCompleta = "${_tituloCtrl.text} - ${_descricaoCtrl.text}";
 
-      // Corrigido: Usando a propriedade nomeada 'dataInformada' exigida pelo seu arquivo gasto.dart
+      // Utiliza o modelo Gasto mapeando para a propriedade que alimenta o banco
       final novoGasto = Gasto(
         descricao: descricaoCompleta,
         valor: valorTratado,
         dataInformada: _dataSelecionada ?? DateTime.now(),
       );
 
-      // Mostra um indicador de carregamento simples
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      // Envia os dados para a tabela do Supabase criada no controller
       bool sucesso = await widget.servicoController.adicionarGasto(novoGasto);
 
-      Navigator.pop(context); // Remove o CircularProgressIndicator da tela
+      Navigator.pop(context); // Remove o CircularProgressIndicator
 
       if (sucesso) {
-        // CRITÉRIO DE ACEITE: Exibir mensagem confirmando a adição dos dados
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Saída financeira registrada com sucesso!'),
             backgroundColor: Colors.green,
           ),
         );
-
-        // CRITÉRIO DE ACEITE: Redirecionar para o relatório de origem atualizado
-        Navigator.pop(context); 
+        Navigator.pop(context); // Retorna ao relatório atualizado
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -204,7 +191,10 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
                     estiloBorda,
                     controller: _valorCtrl,
                     hint: '0.00',
-                    inputFormatters: [mascaraValor],
+                    // 🟢 CORRIGIDO: Filtro limpo nativo que aceita apenas números, pontos e vírgulas sem tamanho fixo
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                    ],
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     validator: (value) {
                       if (value == null || value.isEmpty) {

@@ -13,7 +13,7 @@ class VeiculoController {
   Future<void> carregarVeiculosDoBanco() async {
     try {
       // 1. Busca as linhas direto da tabela do banco de dados
-      final response = await _supabase.from('veiculos').select();
+      final response = await _supabase.from('veiculo').select();
       
       // 2. Transforma o formato do banco (Map) para a lista de objetos 'Veiculo'
       this.listaDeVeiculos = (response as List)
@@ -33,7 +33,7 @@ class VeiculoController {
   Future<bool> salvarNoSistema(Veiculo veiculoPronto) async {
     try {
       // 1. Insere o objeto convertido em Map dentro da tabela do banco
-       await _supabase.from('veiculos').insert(veiculoPronto.toMap());
+       await _supabase.from('veiculo').insert(veiculoPronto.toMap());
       
       // 2. Atualiza a lista local para o usuário ver o novo carro imediatamente
       listaDeVeiculos.insert(0, veiculoPronto);
@@ -121,7 +121,7 @@ class VeiculoController {
     
     try {
       // Deleta do banco de dados real usando a placa como identificador
-       await _supabase.from('veiculos').delete().eq('placa', placaParaRemover.toUpperCase());
+       await _supabase.from('veiculo').delete().eq('placa', placaParaRemover.toUpperCase());
       
       listaDeVeiculos.removeWhere((v) => v.placa == placaParaRemover.toUpperCase());
       return true;

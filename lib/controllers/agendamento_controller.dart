@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:projeto_integrador/models/agendamento.dart';
-// IMPORTANTE: Importe aqui a classe que gerencia seu banco (ex: BancoService, Supabase, etc.)
-// import 'package:projeto_integrador/services/banco_service.dart'; 
+// IMPORTANTE: Conexão real com o Supabase configurada
+import 'package:supabase_flutter/supabase_flutter.dart'; 
 
 class AgendamentoController {
+  // Instancia o cliente do Supabase para conexão com a nuvem
+  final _supabase = Supabase.instance.client;
+
   Map<String, String>? clienteSelecionadoCompleto;
   final formKey = GlobalKey<FormState>();
 
@@ -25,11 +28,16 @@ class AgendamentoController {
       String fimStr = '${horaFimReal!.hour.toString().padLeft(2, '0')}:${horaFimReal!.minute.toString().padLeft(2, '0')}';
       String dataStr = dataReal!.toIso8601String().split('T')[0]; // Pega apenas YYYY-MM-DD
 
-      // 2. Chame o método do seu banco de dados aqui. Exemplo simulado:
-      // List resultados = await BancoService.buscarAgendamentosPorHorario(dataStr, inicioStr, fimStr);
-      // return resultados.isNotEmpty;
+      // 2. Chame o método do seu banco de dados aqui.
+      // CORREÇÃO: Consulta real no Supabase para verificar se já existe agendamento na mesma data e com sobreposição de horário
+      final resultados = await _supabase
+          .from('agendamentos')
+          .select()
+          .eq('data', dataStr)
+          .lt('inicio', fimStr)
+          .gt('fim', inicioStr);
 
-      return false; // Altere de acordo com o retorno do seu banco
+      return resultados.isNotEmpty;
     } catch (e) {
       debugPrint("Erro ao verificar conflito no banco: $e");
       return false;
@@ -42,11 +50,15 @@ class AgendamentoController {
       String nome = clienteSelecionadoCompleto!['nome']!;
       
       // Exemplo de consulta ao banco:
-      // List resultados = await BancoService.buscarAgendamentosPorCliente(nome);
-      // return resultados.isNotEmpty;
+      // CORREÇÃO: Busca real baseada na coluna 'cliente' da sua tabela agendamentos
+      final resultados = await _supabase
+          .from('agendamentos')
+          .select()
+          .eq('cliente', nome);
 
-      return false; 
+      return resultados.isNotEmpty; 
     } catch (e) {
+      debugPrint("Erro ao verificar agendamentos do cliente: $e");
       return false;
     }
   }
@@ -54,21 +66,20 @@ class AgendamentoController {
   // Envia o objeto estruturado direto para a persistência do banco de dados
   Future<bool> salvarNoBancoDeDados() async {
     try {
-      final novoAgendamento = AgendamentoModel(
-        servico: servicoController.text,
-        descricao: descricaoController.text,
-        data: dataReal!,
-        inicio: horaInicioReal!,
-        fim: horaFimReal!,
-        clienteNome: clienteSelecionadoCompleto!['nome']!,
-        veiculoInfo: clienteSelecionadoCompleto!['veiculo']!,
-      );
+      // 1. Formata os horários e data para texto compatível com o PostgreSQL do Supabase
+      String inicioStr = '${horaInicioReal!.hour.toString().padLeft(2, '0')}:${horaInicioReal!.minute.toString().padLeft(2, '0')}';
+      String fimStr = '${horaFimReal!.hour.toString().padLeft(2, '0')}:${horaFimReal!.minute.toString().padLeft(2, '0')}';
+      String dataStr = dataReal!.toIso8601String().split('T')[0];
 
-      // Converte o Model para Map (JSON) para que o banco aceite facilmente
-      Map<String, dynamic> dadosParaSalvar = novoAgendamento.toMap();
-
-      // Exemplo de inserção real:
-      // await BancoService.inserir('agendamentos', dadosParaSalvar);
+      // CORREÇÃO: Ajustado o mapa de inserção para conter EXATAMENTE as colunas da sua tabela 'agendamentos' do print
+      await _supabase.from('agendamentos').insert({
+        'servico': servicoController.text,
+        'descricao': descricaoController.text,
+        'data': dataStr,
+        'inicio': inicioStr,
+        'fim': fimStr,
+        'cliente': clienteSelecionadoCompleto!['nome']!, // Coluna 'cliente' do tipo text no banco
+      });
       
       return true; // Retorna true se salvou com sucesso
     } catch (e) {

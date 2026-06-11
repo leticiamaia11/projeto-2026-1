@@ -3,6 +3,7 @@ import 'package:projeto_integrador/view/cadastro_cliente.dart';
 import 'package:projeto_integrador/controllers/agendamento_controller.dart';
 import 'package:projeto_integrador/controllers/cliente_controller.dart'; 
 import 'package:projeto_integrador/controllers/veículo_controller.dart'; 
+import 'package:projeto_integrador/models/cliente.dart'; // IMPORTADO: Para fazer o cast correto dos objetos
 
 class TelaAgendamento extends StatefulWidget {
   const TelaAgendamento({super.key});
@@ -270,11 +271,20 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
                               runSpacing: 8,
                               children: [
                                 ..._clientesDoBanco.map((cliente) {
-                                  // Se o seu objeto for um Model de Cliente adaptado, use propriedades ponto (ex: cliente.nome)
-                                  // Se for um Map bruto vindo do Supabase, use colchetes como abaixo:
-                                  // CORREÇÃO: Ajustado para usar .nomeCompleto em vez de .nome se o cast falhar
-                                  final String nome = cliente is Map ? (cliente['nome'] ?? '') : (cliente.nomeCompleto ?? '');
-                                  final String veiculo = cliente is Map ? (cliente['veiculo'] ?? 'Sem veículo') : (cliente.veiculoInfo ?? 'Sem veículo');
+                                  // CORREÇÃO: Tratamento estrito do objeto Cliente vindo do Controller
+                                  String nome = '';
+                                  String veiculo = 'Sem veículo';
+
+                                  if (cliente is Cliente) {
+                                    nome = cliente.nomeCompleto;
+                                    // Se o cliente tiver algum veículo vinculado, exibe o primeiro modelo encontrado na lista dele
+                                    if (cliente.meusVeiculos.isNotEmpty) {
+                                      veiculo = cliente.meusVeiculos.first.modelo;
+                                    }
+                                  } else if (cliente is Map) {
+                                    nome = cliente['nome_completo'] ?? cliente['nome'] ?? '';
+                                    veiculo = cliente['veiculo'] ?? 'Sem veículo';
+                                  }
                                   
                                   return _buildClientChip(nome, veiculo, const Color(0xFF1E40AF));
                                 }),

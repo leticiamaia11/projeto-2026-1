@@ -20,23 +20,26 @@ class _TelaCalendarioState extends State<TelaCalendario> {
   @override
   void initState() {
     super.initState();
-    _atualizarListaDoDia(); // Carrega os dados do dia atual assim que a tela abre
+    // Zera as horas do dia atual na inicialização para bater com as buscas do banco
+    _diaSelecionado = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    _atualizarListaDoDia(); 
   }
 
   // Busca assíncrona no banco de dados via controller
   Future<void> _atualizarListaDoDia() async {
+    if (!mounted) return;
     setState(() => _carregando = true);
     await _controller.carregarAgendamentosDoBanco(_diaSelecionado);
-    setState(() => _carregando = false);
+    if (mounted) setState(() => _carregando = false);
   }
 
-  // FLUXO ALTERNATIVO: Exibe confirmação antes de apagar o registro do banco
+  // Exibe confirmação antes de apagar o registro do banco
   void _confirmarExclusao(AgendamentoModel agendamento) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Confirmar Exclusão"),
-        content: const Text("O sistema deve exibir uma mensagem de confirmação da exclusão. Deseja mesmo excluir este agendamento?"),
+        content: const Text("Deseja mesmo excluir este agendamento do sistema definitivamente?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -46,16 +49,23 @@ class _TelaCalendarioState extends State<TelaCalendario> {
             onPressed: () async {
               Navigator.pop(context); // Fecha o modal
               setState(() => _carregando = true);
+              
               bool excluiu = await _controller.deletarAgendamentoDoBanco(agendamento);
+              
               setState(() => _carregando = false);
 
               if (excluiu && mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(backgroundColor: Colors.green, content: Text("Agendamento excluído com sucesso!")),
                 );
+                _atualizarListaDoDia(); // Atualiza a tela após apagar
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(backgroundColor: Colors.redAccent, content: Text("Erro ao excluir agendamento.")),
+                );
               }
             },
-            child: const Text("Excluir", style: TextStyle(color: Colors.redAccent)),
+            child: const Text("Excluir", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -94,11 +104,12 @@ class _TelaCalendarioState extends State<TelaCalendario> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // Aguarda o retorno da tela de cadastro. Se ela salvar algo, atualiza o calendário
+          // Aguarda o retorno da tela de cadastro.
           await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const TelaAgendamento()),
           );
+          // Atualiza a lista imediatamente ao voltar da tela de cadastro
           _atualizarListaDoDia();
         },
         backgroundColor: const Color(0xFF1E40AF),
@@ -127,7 +138,7 @@ class _TelaCalendarioState extends State<TelaCalendario> {
           rightChevronIcon: Icon(Icons.chevron_right, color: Colors.grey),
         ),
         calendarStyle: CalendarStyle(
-          todayDecoration: BoxDecoration(color: const Color(0xFF1E40AF).withAlpha(40), shape: BoxShape.circle),
+          todayDecoration: BoxDecoration(color: const Color(0xFF1E40AF), shape: BoxShape.circle),
           selectedDecoration: const BoxDecoration(color: Color(0xFF1E40AF), shape: BoxShape.circle),
           defaultTextStyle: const TextStyle(fontWeight: FontWeight.w500),
           weekendTextStyle: const TextStyle(color: Colors.grey),
@@ -136,7 +147,8 @@ class _TelaCalendarioState extends State<TelaCalendario> {
         selectedDayPredicate: (day) => isSameDay(_diaSelecionado, day),
         onDaySelected: (selectedDay, focusedDay) {
           setState(() {
-            _diaSelecionado = selectedDay;
+            // Zera as horas para comparar puramente o dia civil (evita bugs de fuso horário)
+            _diaSelecionado = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
             _focoDia = focusedDay;
           });
           _atualizarListaDoDia(); // Busca no banco os dados do novo dia clicado
@@ -148,7 +160,6 @@ class _TelaCalendarioState extends State<TelaCalendario> {
   Widget _buildEventList() {
     final lista = _controller.agendamentosDoDiaSelecionado;
 
-    // FLUXO ALTERNATIVO: "Caso não haja nenhum agendamento, exibe mensagem perguntando se quer criar"
     if (lista.isEmpty) {
       return Center(
         child: Padding(
@@ -166,7 +177,6 @@ class _TelaCalendarioState extends State<TelaCalendario> {
               const SizedBox(height: 8),
               TextButton.icon(
                 onPressed: () async {
-                  // FLUXO ALTERNATIVO: "Caso o usuário clique no botão, abre a tela de agendamento"
                   await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const TelaAgendamento()),
@@ -196,8 +206,7 @@ class _TelaCalendarioState extends State<TelaCalendario> {
           agendamento,
           "$horaInicio - $horaFim",
           "${agendamento.servico} - ${agendamento.clienteNome}",
-          // CRITÉRIO DE ACEITE: "Sistema deve mostrar todos os dados do cliente e do veículo"
-          "Veículo: ${agendamento.veiculoInfo}\nObs: ${agendamento.descricao}",
+          "Obs: ${agendamento.descricao}",
           const Color(0xFF1E40AF),
         );
       },
@@ -229,7 +238,6 @@ class _TelaCalendarioState extends State<TelaCalendario> {
               ],
             ),
           ),
-          // Ícone de lixeira adicionado para satisfazer o fluxo de exclusão solicitado
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
             onPressed: () => _confirmarExclusao(model),

@@ -4,12 +4,18 @@ import 'package:projeto_integrador/view/servicos.dart';
 import 'package:projeto_integrador/controllers/perfil_cliente_controller.dart';
 import 'package:projeto_integrador/controllers/servico_controller.dart'; 
 import 'package:projeto_integrador/controllers/veículo_controller.dart'; 
-import 'package:projeto_integrador/controllers/cliente_controller.dart'; // IMPORTADO: Necessário para o cadastro do veículo funcionar
+import 'package:projeto_integrador/controllers/cliente_controller.dart'; 
 import 'package:intl/intl.dart'; 
 
 class PerfilCliente extends StatefulWidget {
   final Map<String, dynamic> cliente;
-  const PerfilCliente({super.key, required this.cliente});
+  final ClienteController clienteController; // 🟢 CORREÇÃO: Agora exige receber o controlador ativo
+
+  const PerfilCliente({
+    super.key, 
+    required this.cliente, 
+    required this.clienteController,
+  });
 
   @override
   State<PerfilCliente> createState() => _PerfilClienteState();
@@ -18,7 +24,6 @@ class PerfilCliente extends StatefulWidget {
 class _PerfilClienteState extends State<PerfilCliente> {
   late PerfilClienteController _controller;
   late ServicoController _servicoCtrl; 
-  late ClienteController _clienteCtrl; // DECLARADO: Para gerenciar o fluxo do dropdown de veículos
   bool _carregando = true;
 
   @override
@@ -26,19 +31,17 @@ class _PerfilClienteState extends State<PerfilCliente> {
     super.initState();
     _controller = PerfilClienteController(cliente: widget.cliente);
     
-    final veiculoCtrlGenerico = VeiculoController(); 
-    _servicoCtrl = ServicoController(veiculoController: veiculoCtrlGenerico);
-    
-    // CORREÇÃO: Inicializa o controlador exigido pela tela de cadastro de veículos
-    _clienteCtrl = ClienteController(veiculoController: veiculoCtrlGenerico);
+    // 🟢 Reaproveita a infraestrutura do controller existente para evitar duplicação de dados
+    final veiculoCtrl = widget.clienteController.veiculoController; 
+    _servicoCtrl = ServicoController(veiculoController: veiculoCtrl);
     
     _carregarInformacoes();
   }
 
-  // Faz a chamada assíncrona ao banco e atualiza o estado da tela
   Future<void> _carregarInformacoes() async {
     setState(() => _carregando = true);
     try {
+      // Carrega os dados mapeados no PerfilClienteController (Supabase)
       await _controller.buscarDadosRelacionados();
     } catch (e) {
       if (mounted) {
@@ -51,14 +54,13 @@ class _PerfilClienteState extends State<PerfilCliente> {
     }
   }
 
-  // Modal de confirmação que dispara a ação do Supabase
   void _confirmarExclusaoVeiculo(Map<String, dynamic> veiculo) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Excluir Veículo"),
-          content: Text("Deseja realmente remover o veículo ${veiculo['modelo'] ?? ''} (${veiculo['placa'] ?? ''}) do Supabase?"),
+          content: Text("Deseja realmente remover o veículo ${veiculo['modelo'] ?? ''} (${veiculo['placa'] ?? ''})?"),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -73,12 +75,11 @@ class _PerfilClienteState extends State<PerfilCliente> {
 
                 if (mounted) {
                   setState(() => _carregando = false);
-                  
                   if (sucesso) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(backgroundColor: Colors.green, content: Text("Veículo deletado com sucesso do banco!")),
+                      const SnackBar(backgroundColor: Colors.green, content: Text("Veículo deletado com sucesso!")),
                     );
-                    _carregarInformacoes(); // Recarrega a tela local após deletar com sucesso
+                    _carregarInformacoes();
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(backgroundColor: Colors.redAccent, content: Text("Falha ao deletar o veículo.")),
@@ -94,7 +95,6 @@ class _PerfilClienteState extends State<PerfilCliente> {
     );
   }
 
-  // Função auxiliar para formatar datas vindas do banco (String ou DateTime)
   String _formatarData(dynamic dataRaw) {
     if (dataRaw == null) return '';
     try {
@@ -140,25 +140,21 @@ class _PerfilClienteState extends State<PerfilCliente> {
                           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500, color: Colors.black87),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Color(0xFF2B5CB3)),
-                        onPressed: () {},
-                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
                   const Divider(),
                   const Text('Informações', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Color(0xFF2B5CB3))),
                   const SizedBox(height: 8),
-                  Text('Telefone: ${cliente['telefone'] ?? '(41) 99999-9999'}', style: const TextStyle(fontSize: 15)),
+                  Text('Telefone: ${cliente['telefone'] ?? 'Não informado'}', style: const TextStyle(fontSize: 15)),
                   const SizedBox(height: 4),
-                  Text('E-mail: ${cliente['email'] ?? 'cliente@gmail.com'}', style: const TextStyle(fontSize: 15)),
+                  Text('E-mail: ${cliente['email'] ?? 'Não informado'}', style: const TextStyle(fontSize: 15)),
                   const SizedBox(height: 4),
-                  Text('CPF: ${cliente['cpf'] ?? '000.000.000-00'}', style: const TextStyle(fontSize: 15)),
+                  Text('CPF: ${cliente['cpf'] ?? 'Não informado'}', style: const TextStyle(fontSize: 15)),
                   const SizedBox(height: 20),
                   const Divider(),
 
-                  // Seção de Veículos conectada ao banco
+                  // Seção de Veículos
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -208,14 +204,14 @@ class _PerfilClienteState extends State<PerfilCliente> {
                     alignment: Alignment.centerRight,
                     child: TextButton.icon(
                       onPressed: () async {
-                        // CORREÇÃO: Passando o clienteController exigido e removendo o "const" que causava erro
+                        // 🟢 CORREÇÃO: Repassa o controlador herdado válido para que o dropdown funcione
                         await Navigator.push(
                           context, 
                           MaterialPageRoute(
-                            builder: (_) => TelaCadastroVeiculo(clienteController: _clienteCtrl),
+                            builder: (_) => TelaCadastroVeiculo(clienteController: widget.clienteController),
                           ),
                         );
-                        _carregarInformacoes(); // Recarrega os dados reais após cadastrar
+                        _carregarInformacoes(); 
                       },
                       icon: const Text('Adicionar veículo', style: TextStyle(color: Colors.grey)),
                       label: const Icon(Icons.add_circle, color: Color(0xFF2B5CB3)),
@@ -223,7 +219,7 @@ class _PerfilClienteState extends State<PerfilCliente> {
                   ),
                   const Divider(),
 
-                  // Histórico de serviços vindo do banco
+                  // Histórico de serviços
                   const Text('Histórico de Serviços', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Color(0xFF2B5CB3))),
                   const SizedBox(height: 4),
                   if (_controller.veiculosDoCliente.isNotEmpty)
@@ -276,7 +272,6 @@ class _PerfilClienteState extends State<PerfilCliente> {
                             builder: (context) => TelaServicos(servicoController: _servicoCtrl),
                           ),
                         );
-                        
                         if (atualizado == true) {
                           _carregarInformacoes(); 
                         }

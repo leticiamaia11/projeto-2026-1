@@ -4,11 +4,17 @@ import 'package:intl/intl.dart';
 import 'package:projeto_integrador/view/servicos.dart'; 
 import 'package:projeto_integrador/controllers/servico_controller.dart';
 import 'package:projeto_integrador/controllers/veículo_controller.dart';
+import 'package:projeto_integrador/models/veiculo.dart';
 
 class TelaHistorico extends StatefulWidget {
-  final Map<String, dynamic> veiculo; // Recebe o veículo selecionado
+  final ServicoController servicoController;
+  final VeiculoController veiculoController;
 
-  const TelaHistorico({super.key, required this.veiculo});
+  const TelaHistorico({
+    super.key, 
+    required this.servicoController, 
+    required this.veiculoController,
+  });
 
   @override
   State<TelaHistorico> createState() => _TelaHistoricoState();
@@ -16,34 +22,42 @@ class TelaHistorico extends StatefulWidget {
 
 class _TelaHistoricoState extends State<TelaHistorico> {
   final SupabaseClient _supabase = Supabase.instance.client;
-  List<Map<String, dynamic>> _servicos = [];
+  
+  List<Map<String, dynamic>> _todosOsServicos = []; // Cache com tudo vindo do banco
+  List<Map<String, dynamic>> _servicosFiltrados = []; // O que de fato aparece na lista
+  List<Veiculo> _veiculosParaFiltro = []; // Lista de carros pro Dropdown
+  
+  String _filtroSelecionado = "TODOS"; // Controla o estado do filtro (TODOS ou a Placa)
   bool _carregando = true;
 
   @override
   void initState() {
     super.initState();
-    _buscarHistoricoDoSupabase();
+    _inicializarDados();
   }
 
-  // Busca em tempo real os serviços atrelados à placa ou ID deste veículo
-  Future<void> _buscarHistoricoDoSupabase() async {
+  // Carrega em paralelo os veículos e todos os serviços cadastrados
+  Future<void> _inicializarDados() async {
     setState(() => _carregando = true);
     try {
-      final placa = widget.veiculo['placa'];
+      // 1. Carrega os veículos usando o seu VeiculoController
+      await widget.veiculoController.carregarVeiculosDoBanco();
       
-      final dados = await _supabase
+      // 2. Busca TODOS os serviços cadastrados no sistema (sem filtro de placa inicial)
+      final dadosServicos = await _supabase
           .from('servicos')
           .select()
-          .eq('placa_veiculo', placa)
           .order('data_servico', ascending: false);
 
       setState(() {
-        _servicos = List<Map<String, dynamic>>.from(dados);
+        _veiculosParaFiltro = widget.veiculoController.obterVeiculosOrdenados();
+        _todosOsServicos = List<Map<String, dynamic>>.from(dadosServicos);
+        _aplicarFiltroLocal(); // Aplica a filtragem na memória
       });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(backgroundColor: Colors.redAccent, content: Text("Erro ao carregar histórico: $e")),
+          SnackBar(backgroundColor: Colors.redAccent, content: Text("Erro ao carregar dados: $e")),
         );
       }
     } finally {
@@ -51,7 +65,18 @@ class _TelaHistoricoState extends State<TelaHistorico> {
     }
   }
 
-  // CRITÉRIO DE ACEITE: Mostra todas as informações detalhadas em um Modal
+  // Executa o filtro de forma ultra rápida diretamente na memória do celular
+  void _aplicarFiltroLocal() {
+    if (_filtroSelecionado == "TODOS") {
+      _servicosFiltrados = List.from(_todosOsServicos);
+    } else {
+      _servicosFiltrados = _todosOsServicos
+          .where((servico) => servico['placa_veiculo'] == _filtroSelecionado)
+          .toList();
+    }
+  }
+
+  // Caixas de diálogo de detalhes, observações e exclusão mantidas conforme o seu padrão
   void _mostrarDetalhesServico(Map<String, dynamic> servico) {
     showDialog(
       context: context,
@@ -68,9 +93,9 @@ class _TelaHistoricoState extends State<TelaHistorico> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Placa: ${servico['placa_veiculo'] ?? ''}', style: const TextStyle(fontSize: 16)),
+              Text('Placa: ${servico['placa_veiculo'] ?? ''}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text('Valor: R\$ ${(servico['valor'] ?? 0.0).toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text('Valor: R\$ ${(servico['valor'] ?? 0.0).toStringAsFixed(2)}', style: const TextStyle(fontSize: 16)),
               const SizedBox(height: 8),
               Text('Duração: ${servico['duracao_horas'] ?? 0} hora(s)', style: const TextStyle(fontSize: 16)),
               const SizedBox(height: 8),
@@ -95,7 +120,6 @@ class _TelaHistoricoState extends State<TelaHistorico> {
     );
   }
 
-  // FLUXO ALTERNATIVO: Permite adicionar ou editar uma Observação (Salva no Supabase)
   void _abrirModalObservacao(Map<String, dynamic> servico) {
     final txtCtrl = TextEditingController(text: servico['observacoes'] ?? '');
 
@@ -108,7 +132,7 @@ class _TelaHistoricoState extends State<TelaHistorico> {
             controller: txtCtrl,
             maxLines: 3,
             decoration: const InputDecoration(
-              hintText: 'Ex: Este problema ocorre regularmente devido ao desgaste da peça X...',
+              hintText: 'Ex: Problema regular devido ao desgaste...',
               border: OutlineInputBorder(),
             ),
           ),
@@ -119,13 +143,12 @@ class _TelaHistoricoState extends State<TelaHistorico> {
                 Navigator.pop(context);
                 setState(() => _carregando = true);
                 try {
-                  // Atualiza a coluna de observação diretamente no Supabase
                   await _supabase
                       .from('servicos')
                       .update({'observacoes': txtCtrl.text.trim()})
                       .eq('id', servico['id']);
 
-                  _buscarHistoricoDoSupabase(); // Recarrega os dados do banco
+                  _inicializarDados(); 
                 } catch (e) {
                   debugPrint("Erro ao salvar observação: $e");
                 }
@@ -138,12 +161,11 @@ class _TelaHistoricoState extends State<TelaHistorico> {
     );
   }
 
-  // FLUXO ALTERNATIVO: Excluir Serviços do banco de dados
   void _deletarServico(dynamic idServico) async {
     setState(() => _carregando = true);
     try {
       await _supabase.from('servicos').delete().eq('id', idServico);
-      _buscarHistoricoDoSupabase();
+      _inicializarDados();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(backgroundColor: Colors.green, content: Text("Serviço removido com sucesso!")),
@@ -161,9 +183,9 @@ class _TelaHistoricoState extends State<TelaHistorico> {
       backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppBar(
         centerTitle: true,
-        title: Text(
-          'Histórico: ${widget.veiculo['modelo'] ?? 'Veículo'}',
-          style: const TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+        title: const Text(
+          'Histórico de Serviços',
+          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -174,102 +196,162 @@ class _TelaHistoricoState extends State<TelaHistorico> {
       ),
       body: _carregando
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF1E40AF)))
-          : _servicos.isEmpty
-              ? _buildStateVazio() // FLUXO ALTERNATIVO se não houver dados
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _servicos.length,
-                  itemBuilder: (context, index) {
-                    final servico = _servicos[index];
-                    final dataStr = servico['data_servico'] ?? servico['data'];
-                    final dataFormatada = dataStr != null 
-                        ? DateFormat('dd/MM/yyyy').format(DateTime.parse(dataStr.toString()))
-                        : '';
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        onTap: () => _mostrarDetalhesServico(servico), // CRITÉRIO DE ACEITE
-                        title: Text(
-                          servico['descricao'] ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text('$dataFormatada • R\$ ${(servico['valor'] ?? 0.0).toStringAsFixed(2)}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.note_add_outlined, color: Color(0xFF1E40AF)),
-                              onPressed: () => _abrirModalObservacao(servico),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                              onPressed: () => _deletarServico(servico['id']),
-                            ),
-                          ],
+          : Column(
+              children: [
+                // 🟢 COMPONENTE FILTRO DE VEÍCULOS NO TOPO DA TELA
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  margin: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.filter_alt, color: Color(0xFF1E40AF)),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Filtrar Carro:',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _filtroSelecionado,
+                            isExpanded: true,
+                            dropdownColor: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            items: [
+                              const DropdownMenuItem(
+                                value: "TODOS",
+                                child: Text("Todos os Veículos", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E40AF))),
+                              ),
+                              ..._veiculosParaFiltro.map((v) {
+                                return DropdownMenuItem(
+                                  value: v.placa,
+                                  child: Text('${v.modelo} (${v.placa})'),
+                                );
+                              }),
+                            ],
+                            onChanged: (novoValor) {
+                              if (novoValor != null) {
+                                setState(() {
+                                  _filtroSelecionado = novoValor;
+                                  _aplicarFiltroLocal();
+                                });
+                              }
+                            },
+                          ),
                         ),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
+
+                // LISTAGEM DOS SERVIÇOS REALIZADOS
+                Expanded(
+                  child: _servicosFiltrados.isEmpty
+                      ? _buildStateVazio()
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _servicosFiltrados.length,
+                          itemBuilder: (context, index) {
+                            final servico = _servicosFiltrados[index];
+                            final dataStr = servico['data_servico'] ?? servico['data'];
+                            final dataFormatada = dataStr != null 
+                                ? DateFormat('dd/MM/yyyy').format(DateTime.parse(dataStr.toString()))
+                                : '';
+
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                onTap: () => _mostrarDetalhesServico(servico),
+                                title: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        servico['descricao'] ?? '',
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    // Tag discreta exibindo a placa do carro no card
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1E40AF).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        servico['placa_veiculo'] ?? '',
+                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                                subtitle: Text('$dataFormatada • R\$ ${(servico['valor'] ?? 0.0).toStringAsFixed(2)}'),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.note_add_outlined, color: Color(0xFF1E40AF)),
+                                      onPressed: () => _abrirModalObservacao(servico),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                      onPressed: () => _deletarServico(servico['id']),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF1E40AF),
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Novo Serviço', style: TextStyle(color: Colors.white)),
         onPressed: () async {
-          // CRITÉRIO DE ACEITE: Redireciona para a tela de registro injetando a dependência exigida
           final resultado = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => TelaServicos(
-                servicoController: ServicoController(veiculoController: VeiculoController()),
+                servicoController: widget.servicoController,
               ),
             ),
           );
           if (resultado == true) {
-            _buscarHistoricoDoSupabase(); // Recarrega se inseriu um novo serviço
+            _inicializarDados(); // Recarrega se inseriu um novo serviço
           }
         },
       ),
     );
   }
 
-  // Widget visual para tratar o fluxo alternativo quando a lista está zerada
   Widget _buildStateVazio() {
     return Center(
       child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.build_circle_outlined, size: 70, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text(
-            'Nenhum serviço registrado para este veículo.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.black54),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () async {
-              final resultado = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TelaServicos(
-                    servicoController: ServicoController(veiculoController: VeiculoController()),
-                  ),
-                ),
-              );
-              if (resultado == true) _buscarHistoricoDoSupabase();
-            },
-            child: const Text(
-              'Gostaria de adicionar novos serviços?',
-              style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold, fontSize: 15),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.build_circle_outlined, size: 70, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              _filtroSelecionado == "TODOS" 
+                  ? 'Nenhum serviço registrado no sistema.'
+                  : 'Nenhum serviço registrado para o carro $_filtroSelecionado.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, color: Colors.black54),
             ),
-          )
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }

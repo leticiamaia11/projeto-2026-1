@@ -1,12 +1,12 @@
 class RegistroServico {
-  int? id;
+  String? id; 
   String descricao;
   double valor;
   DateTime data;
   String placaVeiculo;
   bool concluido;
   int duracaoEmHoras;
-
+  String? veiculoId; 
   RegistroServico({
     this.id,
     required this.descricao,
@@ -14,6 +14,7 @@ class RegistroServico {
     required this.placaVeiculo,
     required this.duracaoEmHoras,
     this.concluido = false,
+    this.veiculoId,
     DateTime? dataInformada,
   }) : data = dataInformada ?? DateTime.now();
   
@@ -24,10 +25,13 @@ class RegistroServico {
       id: map['id'],
       descricao: map['descricao'] ?? '',
       valor: (map['valor'] as num? ?? 0.0).toDouble(),
-      dataInformada: map['data_servico'] != null ? DateTime.parse(map['data_servico']) : null,
-      placaVeiculo: map['placa_veiculo'] ?? '',
-      duracaoEmHoras: map['duracao_horas'] ?? 0,
+      // Mapeando a coluna 'data' do banco:
+      dataInformada: map['data'] != null ? DateTime.parse(map['data']) : null,
+      // Mapeando as colunas exatamente como estão na imagem do banco:
+      placaVeiculo: map['placaveiculo'] ?? '',
+      duracaoEmHoras: map['duracaoemhoras'] ?? 0,
       concluido: map['concluido'] ?? false,
+      veiculoId: map['veiculo_id'],
     );
   }
 
@@ -36,10 +40,11 @@ class RegistroServico {
       if (id != null) 'id': id,
       'descricao': descricao,
       'valor': valor,
-      'data_servico': data.toIso8601String(),
-      'placa_veiculo': placaVeiculo,
-      'duracao_horas': duracaoEmHoras,
+      'data': data.toIso8601String(), 
+      'placaveiculo': placaVeiculo,   
+      'duracaoemhoras': duracaoEmHoras, 
       'concluido': concluido,
+      if (veiculoId != null) 'veiculo_id': veiculoId, 
     };
   }
 }

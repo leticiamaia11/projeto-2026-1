@@ -1,18 +1,13 @@
-import 'package:projeto_integrador/models/registroServico.dart';
-
 class Veiculo {
-  // Definindo as caracteristicas (variaveis)
-  int? id;
+  String? id; // UUID do próprio veículo
   String modelo;
   String placa;
   int? ano;
   String? cor;
   String proprietario;
   String? observacoes;
-  // os string que possuem "?" indicam que não são obrigatórios
-  List<RegistroServico> historicoServicos;
-  
-  // Construtor  (regra para criar um veículo novo)
+  String? clienteId; // MUDADO PARA String? (UUID do Dono)
+
   Veiculo({
     this.id,
     required this.modelo,
@@ -21,19 +16,19 @@ class Veiculo {
     this.cor,
     required this.proprietario,
     this.observacoes,
-    List<RegistroServico>? historico,
-  }) : historicoServicos = historico ?? [];
+    this.clienteId,
+  });
 
-  //CONEXÃO COM O BANCO
   factory Veiculo.fromMap(Map<String, dynamic> map) {
     return Veiculo(
-      id: map['id'],
+      id: map['id']?.toString(),
       modelo: map['modelo'] ?? '',
       placa: map['placa'] ?? '',
-      ano: map['ano'],
+      ano: map['ano'] != null ? int.tryParse(map['ano'].toString()) : null,
       cor: map['cor'],
-      proprietario: map['proprietario'] ?? '',
+      proprietario: map['proprietario'],
       observacoes: map['observacoes'],
+      clienteId: map['cliente_id']?.toString(), // Lendo o UUID do dono com segurança
     );
   }
 
@@ -42,10 +37,11 @@ class Veiculo {
       if (id != null) 'id': id,
       'modelo': modelo,
       'placa': placa,
-      'ano': ano,
-      'cor': cor,
+      if (ano != null) 'ano': ano,
+      if (cor != null) 'cor': cor,
       'proprietario': proprietario,
-      'observacoes': observacoes,
+      if (observacoes != null) 'observacoes': observacoes,
+      if (clienteId != null) 'cliente_id': clienteId,
     };
   }
 }

@@ -1,5 +1,5 @@
 class Gasto {
-  int? id;
+  String? id; 
   String descricao;
   double valor;
   DateTime data;
@@ -13,7 +13,7 @@ class Gasto {
 
   factory Gasto.fromMap(Map<String, dynamic> map) {
     return Gasto(
-      id: map['id'],
+      id: map['id'], // Agora aceita o formato UUID 
       descricao: map['descricao'] ?? '',
       valor: (map['valor'] as num? ?? 0.0).toDouble(),
       dataInformada: map['data'] != null ? DateTime.parse(map['data']) : null,
@@ -25,7 +25,7 @@ class Gasto {
       if (id != null) 'id': id,
       'descricao': descricao,
       'valor': valor,
-      'data': data.toIso8601String(),
+      'data': data.toIso8601String(), // Envia o timestamp correto
     };
   }
 }
