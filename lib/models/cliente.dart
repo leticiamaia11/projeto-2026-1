@@ -1,8 +1,7 @@
-import 'veiculo.dart';
+import 'veiculo.dart'; 
 
 class Cliente {
-  // Campos Obrigatórios
-  String? id; /////////////////////////////
+  String? id;
   String nomeCompleto;
   String cpf;
   String telefone;
@@ -12,7 +11,7 @@ class Cliente {
   List<Veiculo> meusVeiculos;
 
   Cliente({
-    this.id, ///////////////////////
+    this.id,
     required this.nomeCompleto,
     required this.cpf,
     required this.telefone,
@@ -22,23 +21,31 @@ class Cliente {
     List<Veiculo>? veiculos,
   }) : meusVeiculos = veiculos ?? [];
 
-  //CONEXÃO COM BANCO DE DADOS (Atualizado com os nomes de colunas padrão de banco)
   factory Cliente.fromMap(Map<String, dynamic> map) {
+    List<Veiculo> veiculosCarregados = [];
+    final dadosVeiculo = map['veiculo'] ?? map['veiculos'];
+    if (dadosVeiculo != null && dadosVeiculo is List) {
+      veiculosCarregados = dadosVeiculo
+          .map((v) => Veiculo.fromMap(v as Map<String, dynamic>))
+          .toList();
+    }
+
     return Cliente(
-      id: map['id'],
+      id: map['id']?.toString(), 
       nomeCompleto: map['nome_completo'] ?? map['nomeCompleto'] ?? '',
       cpf: map['cpf'] ?? '',
       telefone: map['telefone'] ?? '',
       email: map['email'] ?? '',
       endereco: map['endereco'],
       observacoes: map['observacoes'],
+      veiculos: veiculosCarregados, 
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      if (id != null) 'id': id, ///////////////////////
-      'nome_completo': nomeCompleto, // Mapeado para snake_case do banco
+      if (id != null) 'id': id,
+      'nome_completo': nomeCompleto, 
       'cpf': cpf,
       'telefone': telefone,
       'email': email,

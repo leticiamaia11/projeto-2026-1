@@ -51,9 +51,9 @@ class ServicoController {
     required DateTime dataServico,
   }) async {
     try {
-      // 1. Faz uma busca na tabela veiculos para achar o 'id' (UUID) correspondente à placa
+      // 1. Faz uma busca na tabela veiculo para achar o 'id' (UUID) correspondente à placa
       final veiculoExistente = await _supabase
-          .from('veiculos')
+          .from('veiculo')
           .select('id')
           .eq('placa', placa)
           .maybeSingle();

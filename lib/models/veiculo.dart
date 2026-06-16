@@ -1,12 +1,12 @@
 class Veiculo {
-  String? id; // UUID do próprio veículo
+  String? id; 
   String modelo;
   String placa;
   int? ano;
   String? cor;
   String proprietario;
   String? observacoes;
-  String? clienteId; // MUDADO PARA String? (UUID do Dono)
+  String? clienteId; 
 
   Veiculo({
     this.id,
@@ -26,9 +26,9 @@ class Veiculo {
       placa: map['placa'] ?? '',
       ano: map['ano'] != null ? int.tryParse(map['ano'].toString()) : null,
       cor: map['cor'],
-      proprietario: map['proprietario'],
+      proprietario: map['proprietario'] ?? 'Desconhecido',
       observacoes: map['observacoes'],
-      clienteId: map['cliente_id']?.toString(), // Lendo o UUID do dono com segurança
+      clienteId: map['cliente_id']?.toString(), 
     );
   }
 

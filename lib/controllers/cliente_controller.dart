@@ -20,7 +20,10 @@ class ClienteController {
   /// Carrega a lista de clientes direto da nuvem e atualiza a memória local
   Future<List<Cliente>> carregarClientesDoBanco() async {
     try {
-      final dados = await _supabase.from('cliente').select();
+      // ✅ CORREÇÃO: O '*, veiculo(*)' diz ao Supabase para trazer tudo do cliente 
+      // e também buscar os veículos relacionados a ele!
+      final dados = await _supabase.from('cliente').select('*, veiculo(*)');
+      
       listaDeClientes = (dados as List).map((map) => Cliente.fromMap(map)).toList();
       return listaDeClientes;
     } catch (e) {

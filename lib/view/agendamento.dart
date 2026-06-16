@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:projeto_integrador/view/cadastro_cliente.dart';
 import 'package:projeto_integrador/controllers/agendamento_controller.dart';
-import 'package:projeto_integrador/controllers/cliente_controller.dart'; 
-import 'package:projeto_integrador/controllers/veículo_controller.dart'; 
-import 'package:projeto_integrador/models/cliente.dart'; // IMPORTADO: Para fazer o cast correto dos objetos
+import 'package:projeto_integrador/controllers/cliente_controller.dart';
+import 'package:projeto_integrador/controllers/veículo_controller.dart';
+import 'package:projeto_integrador/models/cliente.dart'; 
 
 class TelaAgendamento extends StatefulWidget {
   const TelaAgendamento({super.key});
@@ -14,27 +14,24 @@ class TelaAgendamento extends StatefulWidget {
 
 class _TelaAgendamentoState extends State<TelaAgendamento> {
   final AgendamentoController _controller = AgendamentoController();
-  late ClienteController _clienteCtrl; // DECLARADO: Para buscar os dados reais do banco
-  
-  List<dynamic> _clientesDoBanco = []; // Armazena a lista de clientes cadastrados no banco
-  bool _carregando = false; 
-  bool _carregandoClientes = true; // Controla o loading inicial dos chips de clientes
+  late ClienteController _clienteCtrl; 
+
+  List<dynamic> _clientesDoBanco = []; 
+  bool _carregando = false;
+  bool _carregandoClientes = true; 
 
   @override
   void initState() {
     super.initState();
-    // Inicializa o controller injetando a dependência do veículo
     _clienteCtrl = ClienteController(veiculoController: VeiculoController());
     _buscarClientesReais();
   }
 
-  /// Busca os clientes salvos no Supabase para renderizar na tela
   Future<void> _buscarClientesReais() async {
     setState(() => _carregandoClientes = true);
     try {
-      // Supondo que seu controller tenha um método de carregar semelhante a este:
-      await _clienteCtrl.carregarClientesDoBanco(); 
-      _clientesDoBanco = _clienteCtrl.listaDeClientes; // Atualiza a lista local da view
+      await _clienteCtrl.carregarClientesDoBanco();
+      _clientesDoBanco = _clienteCtrl.listaDeClientes; 
     } catch (e) {
       print("Erro ao carregar clientes para o agendamento: $e");
     }
@@ -67,7 +64,9 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
         bool limpouFim = _controller.atualizarHorarioInicio(horaSelecionada);
         if (limpouFim) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("O horário de início mudou. Selecione o fim novamente.")),
+            const SnackBar(
+              content: Text("O horário de início mudou. Selecione o fim novamente."),
+            ),
           );
         }
       });
@@ -105,12 +104,15 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
 
     if (_controller.clienteSelecionadoCompleto == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(backgroundColor: Colors.redAccent, content: Text("Selecione um cliente para continuar.")),
+        const SnackBar(
+          backgroundColor: Colors.redAccent,
+          content: Text("Selecione um cliente para continuar."),
+        ),
       );
       return;
     }
 
-    setState(() => _carregando = true); 
+    setState(() => _carregando = true);
 
     bool existeConflito = await _controller.verificarConflitoHorarioNoBanco();
     if (existeConflito) {
@@ -125,7 +127,7 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
     }
 
     bool clienteJaTemServico = await _controller.clienteJaPossuiAgendamentoNoBanco();
-    setState(() => _carregando = false); 
+    setState(() => _carregando = false);
 
     if (clienteJaTemServico) {
       _mostrarAlertaClienteRepetido();
@@ -159,20 +161,25 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
 
   void _concluirAgendamento() async {
     setState(() => _carregando = true);
-    
     bool sucesso = await _controller.salvarNoBancoDeDados();
-    
+
     if (!mounted) return;
     setState(() => _carregando = false);
 
     if (sucesso) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(backgroundColor: Colors.green, content: Text("Agendamento salvo com sucesso no banco!")),
+        const SnackBar(
+          backgroundColor: Colors.green,
+          content: Text("Agendamento saved com sucesso no banco!"),
+        ),
       );
       Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(backgroundColor: Colors.redAccent, content: Text("Falha ao salvar. Verifique a conexão.")),
+        const SnackBar(
+          backgroundColor: Colors.redAccent,
+          content: Text("Falha ao salvar. Verifique a conexão."),
+        ),
       );
     }
   }
@@ -260,45 +267,69 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E40AF)),
                   ),
                   const SizedBox(height: 12),
-                  
-                  // LISTAGEM DINÂMICA INTEGRADA WITH THE DATABASE
+
                   _carregandoClientes
-                      ? const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator(color: Color(0xFF1E40AF))))
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: CircularProgressIndicator(color: Color(0xFF1E40AF)),
+                          ),
+                        )
                       : _clientesDoBanco.isEmpty
-                          ? const Text("Nenhum cliente cadastrado no banco.", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
+                          ? const Text(
+                              "Nenhum cliente cadastrado no banco.",
+                              style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                            )
                           : Wrap(
                               spacing: 8,
                               runSpacing: 8,
                               children: [
                                 ..._clientesDoBanco.map((cliente) {
-                                  // CORREÇÃO: Tratamento estrito do objeto Cliente vindo do Controller
                                   String nome = '';
                                   String veiculo = 'Sem veículo';
+                                  String id = '';
 
                                   if (cliente is Cliente) {
                                     nome = cliente.nomeCompleto;
-                                    // Se o cliente tiver algum veículo vinculado, exibe o primeiro modelo encontrado na lista dele
+                                    id = cliente.id ?? nome; 
                                     if (cliente.meusVeiculos.isNotEmpty) {
                                       veiculo = cliente.meusVeiculos.first.modelo;
                                     }
                                   } else if (cliente is Map) {
                                     nome = cliente['nome_completo'] ?? cliente['nome'] ?? '';
-                                    veiculo = cliente['veiculo'] ?? 'Sem veículo';
+                                    id = cliente['id']?.toString() ?? nome;
+
+                                    // 👉 CORREÇÃO: Aceita tanto chave singular quanto plural vinda do JSON do Supabase
+                                    var dadosVeiculo = cliente['veiculo'] ?? cliente['veiculos']; 
+
+                                    if (dadosVeiculo != null) {
+                                      if (dadosVeiculo is List && dadosVeiculo.isNotEmpty) {
+                                        veiculo = dadosVeiculo[0]['modelo'] ?? 'Modelo não informado';
+                                      } else if (dadosVeiculo is Map) {
+                                        veiculo = dadosVeiculo['modelo'] ?? 'Modelo não informado';
+                                      } else {
+                                        veiculo = dadosVeiculo.toString();
+                                      }
+                                    }
                                   }
-                                  
-                                  return _buildClientChip(nome, veiculo, const Color(0xFF1E40AF));
+
+                                  return _buildClientChip(
+                                    id, // Enviando ID único para controle perfeito da seleção
+                                    nome,
+                                    veiculo,
+                                    const Color(0xFF1E40AF),
+                                  );
                                 }),
-                                
+
                                 TextButton(
                                   onPressed: () async {
-                                    // Aguarda o cadastro fechar para recarregar a lista do banco em tempo real
                                     await Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) => TelaCadastroCliente(clienteController: _clienteCtrl),
                                       ),
                                     );
-                                    _buscarClientesReais(); // Atualiza a listagem ao voltar
+                                    _buscarClientesReais(); 
                                   },
                                   child: const Text("+ Adicionar", style: TextStyle(color: Color(0xFF1E40AF))),
                                 ),
@@ -330,7 +361,15 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
     );
   }
 
-  Widget _buildTextField(String label, OutlineInputBorder estiloBorda, {bool isLong = false, IconData? icon, TextEditingController? controller, bool readOnly = false, VoidCallback? onTap}) {
+  Widget _buildTextField(
+    String label,
+    OutlineInputBorder estiloBorda, {
+    bool isLong = false,
+    IconData? icon,
+    TextEditingController? controller,
+    bool readOnly = false,
+    VoidCallback? onTap,
+  }) {
     return TextFormField(
       controller: controller,
       readOnly: readOnly,
@@ -347,31 +386,49 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
         fillColor: const Color(0xFFE5E7EB),
         border: estiloBorda,
         enabledBorder: estiloBorda,
-        focusedBorder: estiloBorda.copyWith(borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1)),
+        focusedBorder: estiloBorda.copyWith(
+          borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1),
+        ),
         errorStyle: const TextStyle(color: Colors.redAccent),
-        focusedErrorBorder: estiloBorda.copyWith(borderSide: const BorderSide(color: Colors.redAccent, width: 1)),
-        errorBorder: estiloBorda.copyWith(borderSide: const BorderSide(color: Colors.redAccent, width: 0.5)),
+        focusedErrorBorder: estiloBorda.copyWith(
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+        ),
+        errorBorder: estiloBorda.copyWith(
+          borderSide: const BorderSide(color: Colors.redAccent, width: 0.5),
+        ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       ),
     );
   }
 
-  Widget _buildClientChip(String name, String veiculo, Color color) {
-    bool isSelected = _controller.clienteSelecionadoCompleto?['nome'] == name;
+  Widget _buildClientChip(String id, String name, String veiculo, Color color) {
+    // 👉 CORREÇÃO: Agora valida a seleção usando o ID único, evitando bugs com nomes iguais
+    bool isSelected = _controller.clienteSelecionadoCompleto?['id'] == id;
+    
     return ChoiceChip(
       label: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(name, style: const TextStyle(fontSize: 14)),
-          Text(veiculo, style: TextStyle(fontSize: 10, color: isSelected ? Colors.black54 : Colors.grey)),
+          Text(
+            veiculo,
+            style: TextStyle(
+              fontSize: 10,
+              color: isSelected ? Colors.black54 : Colors.grey,
+            ),
+          ),
         ],
       ),
       selected: isSelected,
       onSelected: (selected) {
         setState(() {
           if (selected) {
-            _controller.clienteSelecionadoCompleto = {'nome': name, 'veiculo': veiculo};
+            _controller.clienteSelecionadoCompleto = {
+              'id': id,
+              'nome': name,
+              'veiculo': veiculo,
+            };
           } else {
             _controller.clienteSelecionadoCompleto = null;
           }
@@ -380,7 +437,10 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
       selectedColor: color.withAlpha(30),
       backgroundColor: Colors.white,
       side: BorderSide(color: isSelected ? color : Colors.grey.shade300),
-      labelStyle: TextStyle(color: isSelected ? Colors.black : Colors.grey, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.black : Colors.grey,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }

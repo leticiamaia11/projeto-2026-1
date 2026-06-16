@@ -45,9 +45,9 @@ class _TelaHistoricoState extends State<TelaHistorico> {
       
       // 2. Busca TODOS os serviços cadastrados no sistema (sem filtro de placa inicial)
       final dadosServicos = await _supabase
-          .from('servicos')
+          .from('registro_servicos')
           .select()
-          .order('data_servico', ascending: false);
+          .order('data', ascending: false);
 
       setState(() {
         _veiculosParaFiltro = widget.veiculoController.obterVeiculosOrdenados();
@@ -81,7 +81,7 @@ class _TelaHistoricoState extends State<TelaHistorico> {
     showDialog(
       context: context,
       builder: (context) {
-        final dataStr = servico['data_servico'] ?? servico['data'];
+        final dataStr = servico['data'] ?? servico['data'];
         final dataFormatada = dataStr != null 
             ? DateFormat('dd/MM/yyyy').format(DateTime.parse(dataStr.toString()))
             : 'Sem data';
@@ -144,7 +144,7 @@ class _TelaHistoricoState extends State<TelaHistorico> {
                 setState(() => _carregando = true);
                 try {
                   await _supabase
-                      .from('servicos')
+                      .from('registro_servicos')
                       .update({'observacoes': txtCtrl.text.trim()})
                       .eq('id', servico['id']);
 
@@ -164,7 +164,7 @@ class _TelaHistoricoState extends State<TelaHistorico> {
   void _deletarServico(dynamic idServico) async {
     setState(() => _carregando = true);
     try {
-      await _supabase.from('servicos').delete().eq('id', idServico);
+      await _supabase.from('registro_servicos').delete().eq('id', idServico);
       _inicializarDados();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
