@@ -17,7 +17,9 @@ class _ListaVeiculosState extends State<ListaVeiculos> {
   final VeiculoController _veiculoCtrl = VeiculoController();
 
   // CORREÇÃO: Criada a instância do ClienteController necessária para abastecer a tela de cadastro
-  final ClienteController _clienteCtrl = ClienteController(veiculoController: VeiculoController());
+  final ClienteController _clienteCtrl = ClienteController(
+    veiculoController: VeiculoController(),
+  );
 
   List<Veiculo> _veiculosExibidos = [];
   bool _estaCarregando = true;
@@ -31,12 +33,14 @@ class _ListaVeiculosState extends State<ListaVeiculos> {
   /// Puxa em tempo real os veículos salvos no Supabase
   Future<void> _carregarDadosDoBanco() async {
     setState(() => _estaCarregando = true);
-    
+
     try {
       // Carrega os dados para a listaDeVeiculos interna do seu controller
-      await _veiculoCtrl.carregarVeiculosDoBanco(); 
+      await _veiculoCtrl.carregarVeiculosDoBanco();
     } catch (e) {
-      print("Nota: Certifique-se de ter o método de carga implementado no controller: $e");
+      print(
+        "Nota: Certifique-se de ter o método de carga implementado no controller: $e",
+      );
     }
 
     if (mounted) {
@@ -107,126 +111,180 @@ class _ListaVeiculosState extends State<ListaVeiculos> {
           // Tratamento dinâmico da árvore de componentes (Loading ou Lista Remota)
           Expanded(
             child: _estaCarregando
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF1E40AF)))
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF1E40AF)),
+                  )
                 : _veiculosExibidos.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Nenhum veículo encontrado.',
-                          style: TextStyle(color: Colors.grey, fontSize: 16),
+                ? const Center(
+                    child: Text(
+                      'Nenhum veículo encontrado.',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _veiculosExibidos.length,
+                    itemBuilder: (context, index) {
+                      final veiculo =
+                          _veiculosExibidos[index]; // Mapeado para o Model real
+
+                      return Container(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
                         ),
-                      )
-                    : ListView.builder(
-                        itemCount: _veiculosExibidos.length,
-                        itemBuilder: (context, index) {
-                          final veiculo = _veiculosExibidos[index]; // Mapeado para o Model real
-
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                            padding: const EdgeInsets.all(16.0),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(15),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
+                        padding: const EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(15),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
-                            child: Row(
-                              children: [
-                                // Ícone azul do carro do protótipo
-                                Container(
-                                  width: 55,
-                                  height: 55,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF8BB7D6).withAlpha(150),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.directions_car_filled_outlined,
-                                    color: Colors.white,
-                                    size: 32,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            // Ícone azul do carro do protótipo
+                            Container(
+                              width: 55,
+                              height: 55,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF8BB7D6).withAlpha(150),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.directions_car_filled_outlined,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
 
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        veiculo.modelo, // Campo real do model
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black87,
-                                        ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    veiculo.modelo, // Campo real do model
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    veiculo.placa, // Campo real do model
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    veiculo.proprietario ??
+                                        'Sem proprietário', // Tratando nulos com segurança
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Botão de excluir (ícone do lápis azul)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline, // Ícone de lixeira
+                                color: Colors
+                                    .redAccent, // Cor vermelha para indicar ação destrutiva
+                                size: 22,
+                              ),
+                              onPressed: () async {
+                                // 1. Confirmação antes de excluir
+                                bool? confirmar = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text("Excluir Veículo"),
+                                    content: Text(
+                                      "Tem certeza que deseja remover ${veiculo.modelo}?",
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text("Cancelar"),
                                       ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        veiculo.placa, // Campo real do model
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        veiculo.proprietario ?? 'Sem proprietário', // Tratando nulos com segurança
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.black54,
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text(
+                                          "Excluir",
+                                          style: TextStyle(color: Colors.red),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
+                                );
 
-                                // Botão de editar (ícone do lápis azul) passando os dados estruturados
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: Color(0xFF2B5CB3),
-                                    size: 20,
-                                  ),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => PerfilCliente( 
-                                          cliente: {
-                                            'nome': veiculo.proprietario ?? '',
-                                            'veiculo': '${veiculo.modelo} - ${veiculo.placa}',
-                                            'cpf': '', // Vazio pois a tela de perfil preenche o resto se necessário
-                                            'telefone': '',
-                                            'email': '',
-                                          },
-                                          clienteController: _clienteCtrl, // Passa o controle adiante para manter a gestão de estado
+                                // 2. Execução da exclusão no banco e na tela
+                                if (confirmar == true) {
+                                  setState(() => _estaCarregando = true);
+
+                                  bool sucesso = await _veiculoCtrl
+                                      .removerVeiculo(veiculo.placa);
+
+                                  if (mounted) {
+                                    if (sucesso) {
+                                      _carregarDadosDoBanco(); // Recarrega a lista do banco
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Veículo removido com sucesso!",
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
+                                      );
+                                    } else {
+                                      setState(() => _estaCarregando = false);
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Erro ao remover veículo.",
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                }
+                              },
                             ),
-                          );
-                        },
-                      ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
+
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           // CORREÇÃO: Nome do parâmetro corrigido e passando a instância correta gerenciada pela tela
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => TelaCadastroVeiculo(clienteController: _clienteCtrl),
+              builder: (_) =>
+                  TelaCadastroVeiculo(clienteController: _clienteCtrl),
             ),
           );
-          
+
           // Quando o usuário volta do cadastro, recarrega a lista do banco de dados na tela
           _carregarDadosDoBanco();
         },

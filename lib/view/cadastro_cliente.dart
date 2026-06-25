@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../controllers/cliente_controller.dart';
-import '../controllers/veículo_controller.dart'; 
 import '../models/cliente.dart';
 
 class TelaCadastroCliente extends StatefulWidget {
-  // CORREÇÃO: Agora a tela exige receber o controlador ativo vindo da listagem
   final ClienteController clienteController;
+  // 🟢 Adicionado para permitir a edição
+  final Cliente? clienteParaEditar; 
 
   const TelaCadastroCliente({
     super.key,
     required this.clienteController,
+    this.clienteParaEditar, // Opcional
   });
 
   @override
@@ -19,13 +20,8 @@ class TelaCadastroCliente extends StatefulWidget {
 }
 
 class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
-  // O Grampo da pasta (Chave do formulário)
   final _formKey = GlobalKey<FormState>();
 
-  // CORREÇÃO: O Gerente da Oficina agora usa o controlador compartilhado ("widget.clienteController")
-  // Apagada a linha antiga que criava um controlador do zero.
-
-  // As Canetas Mágicas (Controllers para capturar o texto da tela)
   final _nomeCtrl = TextEditingController();
   final _cpfCtrl = TextEditingController();
   final _telefoneCtrl = TextEditingController();
@@ -33,10 +29,8 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
   final _enderecoCtrl = TextEditingController();
   final _observacoesCtrl = TextEditingController();
 
-  // Estado para controlar a animação de envio ao Supabase
   bool _enviandoDados = false;
 
-  // UX: Filtros de Proteção (Máscaras de preenchimento)
   var mascaraCpf = MaskTextInputFormatter(
     mask: '###.###.###-##',
     filter: {"#": RegExp(r'[0-9]')},
@@ -52,13 +46,20 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
   @override
   void initState() {
     super.initState();
-    // Não precisamos mais forçar carregarClientesDoBanco() aqui, 
-    // pois a tela anterior já cuidou disso!
+    // 🟢 Se houver cliente, preenche os campos automaticamente
+    if (widget.clienteParaEditar != null) {
+      final c = widget.clienteParaEditar!;
+      _nomeCtrl.text = c.nomeCompleto;
+      _cpfCtrl.text = mascaraCpf.maskText(c.cpf);
+      _telefoneCtrl.text = mascaraTelefone.maskText(c.telefone);
+      _emailCtrl.text = c.email;
+      _enderecoCtrl.text = c.endereco ?? '';
+      _observacoesCtrl.text = c.observacoes ?? '';
+    }
   }
 
   @override
   void dispose() {
-    // Limpando as canetas ao fechar a tela para não pesar a memória
     _nomeCtrl.dispose();
     _cpfCtrl.dispose();
     _telefoneCtrl.dispose();
@@ -68,47 +69,54 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
     super.dispose();
   }
 
-  // REQUISITO ATENDIDO: Método transformado em assíncrono para esperar o Supabase
-  Future<void> _realizarCadastro() async {
-    // 1. Validação Visual do Formulário
+  Future<void> _salvarDados() async {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _enviandoDados = true; // Ativa o modo de carregamento
-      });
+      setState(() => _enviandoDados = true);
       
-      // Pegamos o CPF limpo (sem os pontos e traço da máscara) para mandar para o controller
       String cpfLimpo = mascaraCpf.getUnmaskedText();
+      bool sucesso = false;
 
-      // 2. CORREÇÃO: Chama o método usando o prefixo "widget." para acessar o controlador injetado
-      bool sucesso = await widget.clienteController.processarCadastroCliente(
-        nome: _nomeCtrl.text,
-        cpf: cpfLimpo, 
-        telefone: _telefoneCtrl.text,
-        email: _emailCtrl.text,
-        endereco: _enderecoCtrl.text.isEmpty ? null : _enderecoCtrl.text,
-        observacoes: _observacoesCtrl.text.isEmpty ? null : _observacoesCtrl.text,
-      );
+      if (widget.clienteParaEditar == null) {
+        // 🟢 LÓGICA DE CADASTRO
+        sucesso = await widget.clienteController.processarCadastroCliente(
+          nome: _nomeCtrl.text,
+          cpf: cpfLimpo,
+          telefone: _telefoneCtrl.text,
+          email: _emailCtrl.text,
+          endereco: _enderecoCtrl.text.isEmpty ? null : _enderecoCtrl.text,
+          observacoes: _observacoesCtrl.text.isEmpty ? null : _observacoesCtrl.text,
+        );
+      } else {
+        // 🟢 LÓGICA DE EDIÇÃO
+        Cliente clienteAtualizado = Cliente(
+          id: widget.clienteParaEditar!.id,
+          nomeCompleto: _nomeCtrl.text,
+          cpf: cpfLimpo,
+          telefone: _telefoneCtrl.text,
+          email: _emailCtrl.text,
+          endereco: _enderecoCtrl.text,
+          observacoes: _observacoesCtrl.text,
+        );
+        sucesso = await widget.clienteController.atualizarCliente(clienteAtualizado);
+      }
 
       if (!mounted) return;
+      setState(() => _enviandoDados = false);
 
-      setState(() {
-        _enviandoDados = false; // Desativa o carregamento após a resposta do servidor
-      });
-
-      // FLUXO PRINCIPAL E ALTERNATIVO ATENDIDOS
       if (sucesso) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cliente cadastrado com sucesso!'),
+          SnackBar(
+            content: Text(widget.clienteParaEditar == null 
+                ? 'Cliente cadastrado com sucesso!' 
+                : 'Cliente atualizado com sucesso!'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context); // Retorna com sucesso para a tela de listagem atualizada
+        Navigator.pop(context, true);
       } else {
-        // Se cai aqui, é porque a trava de CPF foi acionada ou houve falha de conexão
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Erro: Este CPF já está registrado ou os dados são inválidos.'),
+            content: Text('Erro: Verifique os dados ou conexão.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -118,7 +126,6 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
 
   @override
   Widget build(BuildContext context) {
-    // Estilo padrão arredondado sem linhas pretas
     final estiloBorda = OutlineInputBorder(
       borderRadius: BorderRadius.circular(30.0),
       borderSide: BorderSide.none,
@@ -128,9 +135,9 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
       backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppBar(
         centerTitle: true,
-        title: const Text(
-          'Registrar Cliente',
-          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+        title: Text(
+          widget.clienteParaEditar == null ? 'Registrar Cliente' : 'Editar Cliente',
+          style: const TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -139,121 +146,50 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: SizedBox(
-            width: 350, // Mantendo o padrão de largura ideal para mobile/desktop
+            width: 350,
             child: Form(
               key: _formKey,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // CAMPO NOME (Obrigatório)
-                  _buildTextField(
-                    'Nome Completo',
-                    estiloBorda,
-                    controller: _nomeCtrl,
-                    hint: 'ex: João da Silva',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Por favor, informe o nome';
-                      }
-                      return null;
-                    },
-                  ),
+                  _buildTextField('Nome Completo', estiloBorda, controller: _nomeCtrl, validator: (v) => v!.isEmpty ? 'Obrigatório' : null),
                   const SizedBox(height: 16),
-
-                  // CAMPO CPF (Obrigatório com Máscara)
-                  _buildTextField(
-                    'CPF',
-                    estiloBorda,
-                    controller: _cpfCtrl,
-                    hint: '000.000.000-00',
-                    inputFormatters: [mascaraCpf],
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Informe o CPF';
-                      }
-                      if (mascaraCpf.getUnmaskedText().length != 11) {
-                        return 'O CPF deve ter 11 dígitos';
-                      }
-                      return null;
-                    },
-                  ),
+                  _buildTextField('CPF', estiloBorda, controller: _cpfCtrl, inputFormatters: [mascaraCpf], keyboardType: TextInputType.number, validator: (value) {
+    if (value == null || value.isEmpty) return 'Informe o CPF';
+    
+    // 🟢 Limpa qualquer caractere que não seja número
+    String apenasNumeros = value.replaceAll(RegExp(r'[^0-9]'), '');
+    
+    if (apenasNumeros.length != 11) {
+      return 'O CPF deve ter 11 dígitos';
+    }
+    return null;
+  },
+  ),
                   const SizedBox(height: 16),
-
-                  // CAMPO TELEFONE (Obrigatório com Máscara)
-                  _buildTextField(
-                    'Telefone',
-                    estiloBorda,
-                    controller: _telefoneCtrl,
-                    hint: '(00) 00000-0000',
-                    inputFormatters: [mascaraTelefone],
-                    keyboardType: TextInputType.phone,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Informe o telefone';
-                      }
-                      return null;
-                    },
-                  ),
+                  _buildTextField('Telefone', estiloBorda, controller: _telefoneCtrl, inputFormatters: [mascaraTelefone], keyboardType: TextInputType.phone),
                   const SizedBox(height: 16),
-
-                  // CAMPO E-MAIL (Obrigatório)
-                  _buildTextField(
-                    'E-mail',
-                    estiloBorda,
-                    controller: _emailCtrl,
-                    hint: 'joao@email.com',
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Informe o e-mail';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Digite um e-mail válido';
-                      }
-                      return null;
-                    },
-                  ),
+                  _buildTextField('E-mail', estiloBorda, controller: _emailCtrl, keyboardType: TextInputType.emailAddress),
                   const SizedBox(height: 16),
-
-                  // CAMPO ENDEREÇO (Opcional)
-                  _buildTextField(
-                    'Endereço (Opcional)',
-                    estiloBorda,
-                    controller: _enderecoCtrl,
-                    hint: 'Rua, Número, Bairro',
-                  ),
+                  _buildTextField('Endereço', estiloBorda, controller: _enderecoCtrl),
                   const SizedBox(height: 16),
-
-                  // CAMPO OBSERVAÇÕES (Opcional)
-                  _buildTextField(
-                    'Observações (Opcional)',
-                    estiloBorda,
-                    controller: _observacoesCtrl,
-                    hint: 'ex: Cliente prefere contato via WhatsApp',
-                    maxLines: 3,
-                  ),
-
+                  _buildTextField('Observações', estiloBorda, controller: _observacoesCtrl, maxLines: 3),
                   const SizedBox(height: 32),
-
-                  // BOTÃO SALVAR COM FEEDBACK DE PROGRESSO
                   _enviandoDados
                       ? const CircularProgressIndicator(color: Color(0xFF1E40AF))
                       : ElevatedButton(
-                          onPressed: _realizarCadastro,
+                          onPressed: _salvarDados,
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size(200, 48),
-                            backgroundColor: const Color(0xFF1E40AF), // Azul Identidade Engetec
+                            backgroundColor: const Color(0xFF1E40AF),
                             shape: const StadiumBorder(),
                           ),
-                          child: const Text(
-                            'Salvar Cliente',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          child: Text(
+                            widget.clienteParaEditar == null ? 'Salvar Cliente' : 'Atualizar Cliente',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                         ),
                 ],
@@ -265,17 +201,7 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
     );
   }
 
-  // Função auxiliar idêntica à de veículo para reuso de design
-  Widget _buildTextField(
-    String label,
-    OutlineInputBorder border, {
-    TextEditingController? controller,
-    FormFieldValidator<String>? validator,
-    List<dynamic>? inputFormatters,
-    String? hint,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-  }) {
+  Widget _buildTextField(String label, OutlineInputBorder border, {TextEditingController? controller, FormFieldValidator<String>? validator, List<dynamic>? inputFormatters, TextInputType? keyboardType, int maxLines = 1}) {
     return TextFormField(
       controller: controller,
       validator: validator,
@@ -284,16 +210,11 @@ class _TelaCadastroClienteState extends State<TelaCadastroCliente> {
       maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
-        alignLabelWithHint: true,
-        hintText: hint,
         filled: true,
-        fillColor: const Color(0xFFE5E7EB), // Cinza claro padrão
+        fillColor: const Color(0xFFE5E7EB),
         border: border,
         enabledBorder: border,
-        focusedBorder: border.copyWith(
-          borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1),
-        ),
-        errorStyle: const TextStyle(color: Colors.redAccent),
+        focusedBorder: border.copyWith(borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       ),
     );

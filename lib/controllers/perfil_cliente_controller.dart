@@ -15,33 +15,43 @@ class PerfilClienteController {
   // Busca real utilizando os relacionamentos do banco de dados
   Future<void> buscarDadosRelacionados() async {
     try {
-      final clienteId = cliente['id'];
-      if (clienteId == null) return;
+      final clienteId = cliente['id'].toString(); // Garantindo que o ID seja uma string
+      if (clienteId == null) {
+        debugPrint("ERRO: O ID do cliente está nulo!");
+        return;
+      }
 
-      // 1. Busca os veículos vinculados ao ID deste cliente
+      // 1. Busca os veículos
       final respostaVeiculos = await _supabase
-          .from('veiculos') // Nome da sua tabela de veículos
+          .from('veiculo')
           .select()
-          .eq('cliente_id', clienteId); // Chave estrangeira no banco
+          .eq('cliente_id', clienteId);
 
       veiculosDoCliente = List<Map<String, dynamic>>.from(respostaVeiculos);
+      debugPrint("Veículos carregados: ${veiculosDoCliente.length}");
 
-      // 2. Se o cliente tiver pelo menos um veículo, busca o histórico de serviços dele
+      // 2. Busca serviços de forma segura
       if (veiculosDoCliente.isNotEmpty) {
-        final veiculoId = veiculosDoCliente[0]['id'];
+        // Conversão segura: aceita tanto int quanto string convertida para int
+        final List<int> idsVeiculos = veiculosDoCliente
+            .map<int>((v) => int.tryParse(v['id'].toString()) ?? 0)
+            .where((id) => id > 0)
+            .toList();
         
+        debugPrint("Buscando serviços para os IDs: $idsVeiculos");
+
         final respostaServicos = await _supabase
-            .from('servicos') // Nome da sua tabela de serviços/histórico
+            .from('registro_servicos')
             .select()
-            .eq('veiculo_id', veiculoId); // Chave estrangeira no banco
+            .inFilter('veiculo_id', idsVeiculos);
 
         servicosDoVeiculo = List<Map<String, dynamic>>.from(respostaServicos);
+        debugPrint("Serviços carregados: ${servicosDoVeiculo.length}");
       } else {
         servicosDoVeiculo.clear();
       }
     } catch (e) {
-      debugPrint("Erro ao buscar dados do Supabase: $e");
-      rethrow; // Repassa o erro para a View tratar se necessário
+      debugPrint("ERRO NO SUPABASE: $e");
     }
   }
 
@@ -53,7 +63,7 @@ class PerfilClienteController {
 
       // Executa o DELETE na tabela do Supabase
       await _supabase
-          .from('veiculos')
+          .from('veiculo')
           .delete()
           .eq('id', veiculoId);
       

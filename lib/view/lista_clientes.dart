@@ -136,12 +136,13 @@ class _ListaClientesState extends State<ListaClientes> {
                               subtitle: Text(textoVeiculo),
                               trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                               onTap: () async {
-                                // 🟢 CORREÇÃO: Passa o objeto real adaptado para o Perfil não perder as referências
+                                // CORREÇÃO: Passa o objeto real adaptado para o Perfil não perder as referências
                                 await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => PerfilCliente(
                                       cliente: {
+                                        'id': cliente.id,
                                         'nome': cliente.nomeCompleto,
                                         'proprietario': cliente.nomeCompleto,
                                         'veiculo': textoVeiculo,

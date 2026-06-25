@@ -89,7 +89,6 @@ class ServicoController {
     }
   }
 
-  /// 🟢 AJUSTADO: Agora salvando na tabela correta 'gasto' sem renomear a data
   Future<bool> adicionarGasto(Gasto gasto) async {
     try {
       // Converte o objeto para Mapa. Como a tabela se chama 'gasto' e a 

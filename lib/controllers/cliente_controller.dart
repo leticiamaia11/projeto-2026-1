@@ -20,8 +20,7 @@ class ClienteController {
   /// Carrega a lista de clientes direto da nuvem e atualiza a memória local
   Future<List<Cliente>> carregarClientesDoBanco() async {
     try {
-      // ✅ CORREÇÃO: O '*, veiculo(*)' diz ao Supabase para trazer tudo do cliente 
-      // e também buscar os veículos relacionados a ele!
+      // O '*, veiculo(*)' diz ao Supabase para trazer tudo do cliente e também buscar os veículos relacionados a ele
       final dados = await _supabase.from('cliente').select('*, veiculo(*)');
       
       listaDeClientes = (dados as List).map((map) => Cliente.fromMap(map)).toList();
@@ -236,4 +235,46 @@ class ClienteController {
       print("Erro ao inserir veículo na nuvem: $e");
     }
   }
+
+  //===============================================================================
+  //                          EDITAR E EXCLUIR CLIENTE
+  //===============================================================================
+  
+  /// Exclui o cliente do banco de dados e da lista local
+  Future<bool> deletarClienteComVeiculos(String idCliente) async {
+  try {
+    // 1. Deleta primeiro os veículos que possuem esse cliente_id
+    await _supabase.from('veiculo').delete().eq('cliente_id', idCliente);
+
+    // 2. Agora deleta o cliente
+    await _supabase.from('cliente').delete().eq('id', idCliente);
+
+    // 3. Atualiza a memória local
+    listaDeClientes.removeWhere((c) => c.id == idCliente);
+    
+    return true;
+  } catch (e) {
+    print("Erro ao deletar: $e");
+    return false;
+  }
+}
+
+  /// Atualiza as informações de um cliente existente
+  Future<bool> atualizarCliente(Cliente clienteAtualizado) async {
+  // Garante que o ID não seja nulo antes de enviar
+  if (clienteAtualizado.id == null) return false; 
+
+  try {
+    await _supabase
+        .from('cliente')
+        .update(clienteAtualizado.toMap())
+        .eq('id', clienteAtualizado.id!); // O '!' força o uso como String não nula
+
+    // ... restante do código de atualização de lista local
+    return true;
+  } catch (e) {
+    print("Erro ao atualizar: $e");
+    return false;
+  }
+}
 }
