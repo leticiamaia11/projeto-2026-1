@@ -6,6 +6,7 @@ import 'package:projeto_integrador/controllers/veículo_controller.dart';
 import '../models/registroServico.dart';
 // IMPORTANTE: Importando o modelo de Gasto fornecido
 import '../models/gasto.dart';
+import '../services/pdf_service.dart';
 
 class TelaRelatorio extends StatefulWidget {
   final ServicoController servicoController;
@@ -42,6 +43,8 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
   // 🟢 Tratamento dinâmico adaptado para reconhecer instâncias de RegistroServico e Gasto
   List<dynamic> _filtrarPorPeriodo(List<dynamic> lista) {
     final agora = DateTime.now();
+    final inicioHoje = DateTime(agora.year, agora.month, agora.day);
+
     return lista.where((item) {
       DateTime dataItem;
 
@@ -50,26 +53,43 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
       } else if (item is Gasto) {
         dataItem = item.data;
       } else {
-        // Fallback de segurança caso algum mapa solto passe pela listagem
         dataItem = DateTime.parse(
           (item['data_gasto'] ?? item['data'] ?? agora.toString()).toString(),
         );
       }
 
-      final diferencaDias = agora.difference(dataItem).inDays;
+      final dataSomenteDia =
+          DateTime(dataItem.year, dataItem.month, dataItem.day);
 
       if (_periodoSelecionado == 'Diário') {
-        return diferencaDias == 0 && dataItem.day == agora.day;
-      } else if (_periodoSelecionado == 'Quinzenal') {
-        return diferencaDias <= 15;
-      } else {
-        return diferencaDias <= 30;
+        return dataSomenteDia == inicioHoje;
       }
+
+      if (_periodoSelecionado == 'Quinzenal') {
+        final inicio = inicioHoje.subtract(const Duration(days: 14));
+        return !dataSomenteDia.isBefore(inicio) &&
+            !dataSomenteDia.isAfter(inicioHoje);
+      }
+
+      // Mensal = mês calendário atual, e não simplesmente os últimos 30 dias.
+      return dataItem.year == agora.year && dataItem.month == agora.month;
     }).toList();
   }
 
-  void _exportarRelatorioPDF() {
-    showDialog(
+  Future<void> _exportarRelatorioPDF() async {
+    final listaGastos = widget.servicoController.listaDeGastos;
+    final listaServicos = widget.servicoController.historicoGlobal;
+
+    final gastosFiltrados = _filtrarPorPeriodo(listaGastos).whereType<Gasto>().toList();
+    final servicosFiltrados =
+        _filtrarPorPeriodo(listaServicos).whereType<RegistroServico>().toList();
+
+    final totalFaturado =
+        servicosFiltrados.fold<double>(0, (soma, servico) => soma + servico.valor);
+    final totalGastos =
+        gastosFiltrados.fold<double>(0, (soma, gasto) => soma + gasto.valor);
+
+    final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Row(
@@ -80,36 +100,42 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
           ],
         ),
         content: Text(
-          'Deseja salvar o relatório $_periodoSelecionado em formato PDF?',
+          'Deseja gerar o relatório $_periodoSelecionado em formato PDF?\n\n'
+          'Ganhos: R\$ ${totalFaturado.toStringAsFixed(2).replaceAll('.', ',')}\n'
+          'Gastos: R\$ ${totalGastos.toStringAsFixed(2).replaceAll('.', ',')}',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: Colors.green,
-                  content: Text(
-                    'O sistema confirma: Relatório salvo com sucesso em PDF!',
-                  ),
-                ),
-              );
-            },
-            child: const Text(
-              'Salvar',
-              style: TextStyle(
-                color: Color(0xFF1E40AF),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Gerar PDF'),
           ),
         ],
       ),
     );
+
+    if (confirmar != true || !mounted) return;
+
+    try {
+      await PdfService.gerarRelatorioFinanceiro(
+        periodo: _periodoSelecionado,
+        gastos: gastosFiltrados,
+        servicos: servicosFiltrados,
+        totalFaturado: totalFaturado,
+        totalGastos: totalGastos,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Não foi possível gerar o PDF: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   @override

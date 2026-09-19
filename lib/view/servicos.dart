@@ -19,7 +19,7 @@ class _TelaServicosState extends State<TelaServicos> {
   final _valorCtrl = TextEditingController();
   final _duracaoCtrl = TextEditingController();
 
-  String? _placaSelecionada; 
+  String? _placaSelecionada;
   List<Veiculo> _listaDeVeiculos = [];
   bool _carregando = true;
 
@@ -31,10 +31,12 @@ class _TelaServicosState extends State<TelaServicos> {
 
   Future<void> _carregarVeiculos() async {
     try {
-      await widget.servicoController.veiculoController.carregarVeiculosDoBanco();
+      await widget.servicoController.veiculoController
+          .carregarVeiculosDoBanco();
       if (mounted) {
         setState(() {
-          _listaDeVeiculos = widget.servicoController.veiculoController.obterVeiculosOrdenados();
+          _listaDeVeiculos = widget.servicoController.veiculoController
+              .obterVeiculosOrdenados();
           _carregando = false;
         });
       }
@@ -58,7 +60,10 @@ class _TelaServicosState extends State<TelaServicos> {
     if (_formKey.currentState!.validate()) {
       if (_placaSelecionada == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(backgroundColor: Colors.orange, content: Text("Por favor, selecione um veículo.")),
+          const SnackBar(
+            backgroundColor: Colors.orange,
+            content: Text("Por favor, selecione um veículo."),
+          ),
         );
         return;
       }
@@ -77,12 +82,18 @@ class _TelaServicosState extends State<TelaServicos> {
         setState(() => _carregando = false);
         if (sucesso) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(backgroundColor: Colors.green, content: Text("Serviço registrado com sucesso!")),
+            const SnackBar(
+              backgroundColor: Colors.green,
+              content: Text("Serviço registrado com sucesso!"),
+            ),
           );
           Navigator.pop(context, true);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(backgroundColor: Colors.redAccent, content: Text("Erro ao salvar serviço.")),
+            const SnackBar(
+              backgroundColor: Colors.redAccent,
+              content: Text("Erro ao salvar serviço."),
+            ),
           );
         }
       }
@@ -102,8 +113,11 @@ class _TelaServicosState extends State<TelaServicos> {
       appBar: AppBar(
         centerTitle: true,
         title: const Text(
-          'Registrar Serviço', 
-          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+          'Registrar Serviço',
+          style: TextStyle(
+            color: Color(0xFF1E40AF),
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -136,10 +150,18 @@ class _TelaServicosState extends State<TelaServicos> {
                             border: estiloBorda,
                             enabledBorder: estiloBorda,
                             focusedBorder: estiloBorda.copyWith(
-                              borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF1E40AF),
+                                width: 1,
+                              ),
                             ),
-                            errorStyle: const TextStyle(color: Colors.redAccent),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            errorStyle: const TextStyle(
+                              color: Colors.redAccent,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
                           ),
                           items: _listaDeVeiculos.map((Veiculo veiculo) {
                             return DropdownMenuItem<String>(
@@ -156,7 +178,9 @@ class _TelaServicosState extends State<TelaServicos> {
                               _placaSelecionada = novoValor;
                             });
                           },
-                          validator: (value) => value == null ? "Selecione um veículo obrigatoriamente" : null,
+                          validator: (value) => value == null
+                              ? "Selecione um veículo obrigatoriamente"
+                              : null,
                         ),
                         const SizedBox(height: 16),
 
@@ -166,7 +190,9 @@ class _TelaServicosState extends State<TelaServicos> {
                           estiloBorda,
                           controller: _descricaoCtrl,
                           hint: 'ex: Troca de Óleo',
-                          validator: (v) => v!.isEmpty ? "A descrição não pode ser vazia" : null,
+                          validator: (v) => v!.isEmpty
+                              ? "A descrição não pode ser vazia"
+                              : null,
                         ),
                         const SizedBox(height: 16),
 
@@ -176,8 +202,11 @@ class _TelaServicosState extends State<TelaServicos> {
                           estiloBorda,
                           controller: _valorCtrl,
                           hint: '0.00',
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          validator: (v) => v!.isEmpty ? "Insira um valor válido" : null,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          validator: (v) =>
+                              v!.isEmpty ? "Insira um valor válido" : null,
                         ),
                         const SizedBox(height: 16),
 
@@ -188,21 +217,25 @@ class _TelaServicosState extends State<TelaServicos> {
                           controller: _duracaoCtrl,
                           hint: 'ex: 2',
                           keyboardType: TextInputType.number,
-                          validator: (v) => v!.isEmpty ? "Insira o tempo de duração" : null,
+                          validator: (v) =>
+                              v!.isEmpty ? "Insira o tempo de duração" : null,
                         ),
                         const SizedBox(height: 32),
 
                         // BOTÃO GRAVAR ADAPTADO NO ESTILO STADIUM
                         ElevatedButton(
-                          onPressed: _enviarFormulario, 
+                          onPressed: _enviarFormulario,
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size(200, 48),
-                            backgroundColor: const Color(0xFF1E40AF), 
+                            backgroundColor: const Color(0xFF1E40AF),
                             shape: const StadiumBorder(),
                           ),
                           child: const Text(
-                            'Gravar Serviço', 
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            'Gravar Serviço',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -244,7 +277,10 @@ class _TelaServicosState extends State<TelaServicos> {
         errorBorder: border.copyWith(
           borderSide: const BorderSide(color: Colors.redAccent, width: 0.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
       ),
     );
   }

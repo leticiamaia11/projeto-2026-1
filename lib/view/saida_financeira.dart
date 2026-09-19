@@ -42,7 +42,7 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1E40AF), 
+              primary: Color(0xFF1E40AF),
               onPrimary: Colors.white,
               onSurface: Colors.black87,
             ),
@@ -55,16 +55,17 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
     if (selecionado != null) {
       setState(() {
         _dataSelecionada = selecionado;
-        _dataCtrl.text = "${selecionado.day.toString().padLeft(2, '0')}/${selecionado.month.toString().padLeft(2, '0')}/${selecionado.year}";
+        _dataCtrl.text =
+            "${selecionado.day.toString().padLeft(2, '0')}/${selecionado.month.toString().padLeft(2, '0')}/${selecionado.year}";
       });
     }
   }
 
   Future<void> _realizarRegistro() async {
     if (_formKey.currentState!.validate()) {
-      
       // Converte o texto substituindo a vírgula por ponto para o double.parse funcionar de forma segura
-      final valorTratado = double.tryParse(_valorCtrl.text.replaceAll(',', '.')) ?? 0.0;
+      final valorTratado =
+          double.tryParse(_valorCtrl.text.replaceAll(',', '.')) ?? 0.0;
 
       // Mantém a regra de negócio de unificar Título - Descrição
       final descricaoCompleta = "${_tituloCtrl.text} - ${_descricaoCtrl.text}";
@@ -118,7 +119,10 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
         centerTitle: true,
         title: const Text(
           'Saída',
-          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF1E40AF),
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -131,7 +135,7 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: SizedBox(
-            width: 350, 
+            width: 350,
             child: Form(
               key: _formKey,
               child: Column(
@@ -174,7 +178,10 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
                         estiloBorda,
                         controller: _dataCtrl,
                         hint: 'Escolha Data',
-                        suffixIcon: const Icon(Icons.calendar_today, color: Colors.grey),
+                        suffixIcon: const Icon(
+                          Icons.calendar_today,
+                          color: Colors.grey,
+                        ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Selecione a data do gasto';
@@ -195,7 +202,9 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                     ],
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Informe o valor total gasto';
@@ -213,13 +222,17 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
                     onPressed: _realizarRegistro,
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(220, 48),
-                      backgroundColor: const Color(0xFFE5E7EB), 
+                      backgroundColor: const Color(0xFFE5E7EB),
                       elevation: 0,
                       shape: const StadiumBorder(),
                     ),
                     child: const Text(
                       'Registrar',
-                      style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                        color: Color(0xFF1E40AF),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ],
@@ -253,7 +266,7 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
         alignLabelWithHint: true,
         hintText: hint,
         filled: true,
-        fillColor: const Color(0xFFE5E7EB), 
+        fillColor: const Color(0xFFE5E7EB),
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(
@@ -261,7 +274,10 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
         ),
         suffixIcon: suffixIcon,
         errorStyle: const TextStyle(color: Colors.redAccent),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
       ),
     );
   }
