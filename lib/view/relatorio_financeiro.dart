@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:projeto_integrador/controllers/servico_controller.dart';
 import 'package:projeto_integrador/view/saida_financeira.dart';
-import 'package:projeto_integrador/view/servicos.dart'; 
-import 'package:projeto_integrador/controllers/veículo_controller.dart'; 
-import '../models/registroServico.dart'; 
+import 'package:projeto_integrador/view/servicos.dart';
+import 'package:projeto_integrador/controllers/veículo_controller.dart';
+import '../models/registroServico.dart';
 // IMPORTANTE: Importando o modelo de Gasto fornecido
-import '../models/gasto.dart'; 
+import '../models/gasto.dart';
 
 class TelaRelatorio extends StatefulWidget {
   final ServicoController servicoController;
@@ -22,8 +22,8 @@ class TelaRelatorio extends StatefulWidget {
 }
 
 class _TelaRelatorioState extends State<TelaRelatorio> {
-  String _abaAtual = 'Gastos'; 
-  String _periodoSelecionado = 'Mensal'; 
+  String _abaAtual = 'Gastos';
+  String _periodoSelecionado = 'Mensal';
   bool _carregandoDoBanco = false;
 
   @override
@@ -51,9 +51,11 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
         dataItem = item.data;
       } else {
         // Fallback de segurança caso algum mapa solto passe pela listagem
-        dataItem = DateTime.parse((item['data_gasto'] ?? item['data'] ?? agora.toString()).toString());
+        dataItem = DateTime.parse(
+          (item['data_gasto'] ?? item['data'] ?? agora.toString()).toString(),
+        );
       }
-          
+
       final diferencaDias = agora.difference(dataItem).inDays;
 
       if (_periodoSelecionado == 'Diário') {
@@ -77,7 +79,9 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
             Text('Exportar Relatório'),
           ],
         ),
-        content: Text('Deseja salvar o relatório $_periodoSelecionado em formato PDF?'),
+        content: Text(
+          'Deseja salvar o relatório $_periodoSelecionado em formato PDF?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -89,11 +93,19 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   backgroundColor: Colors.green,
-                  content: Text('O sistema confirma: Relatório salvo com sucesso em PDF!'),
+                  content: Text(
+                    'O sistema confirma: Relatório salvo com sucesso em PDF!',
+                  ),
                 ),
               );
             },
-            child: const Text('Salvar', style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Salvar',
+              style: TextStyle(
+                color: Color(0xFF1E40AF),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -102,8 +114,8 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
 
   @override
   Widget build(BuildContext context) {
-    final listaServicosRaw = widget.servicoController.historicoGlobal; 
-    final listaGastosRaw = widget.servicoController.listaDeGastos; 
+    final listaServicosRaw = widget.servicoController.historicoGlobal;
+    final listaGastosRaw = widget.servicoController.listaDeGastos;
 
     final listaGastosFiltrados = _filtrarPorPeriodo(listaGastosRaw);
     final listaServicosFiltrados = _filtrarPorPeriodo(listaServicosRaw);
@@ -122,7 +134,9 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
 
     double balancoTotal = totalFaturado - totalGastos;
 
-    final listaExibida = _abaAtual == 'Gastos' ? listaGastosFiltrados : listaServicosFiltrados;
+    final listaExibida = _abaAtual == 'Gastos'
+        ? listaGastosFiltrados
+        : listaServicosFiltrados;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
@@ -134,7 +148,12 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                 Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(color: Color(0xFF1E40AF)),
-                  padding: const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 24),
+                  padding: const EdgeInsets.only(
+                    top: 40,
+                    left: 16,
+                    right: 16,
+                    bottom: 24,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -142,15 +161,25 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                            icon: const Icon(
+                              Icons.arrow_back_ios,
+                              color: Colors.white,
+                            ),
                             onPressed: () => Navigator.pop(context),
                           ),
                           const Text(
                             'Relatório',
-                            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.download, color: Colors.white),
+                            icon: const Icon(
+                              Icons.download,
+                              color: Colors.white,
+                            ),
                             onPressed: _exportarRelatorioPDF,
                           ),
                         ],
@@ -163,36 +192,57 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                       const SizedBox(height: 4),
                       Text(
                         'R\$ ${balancoTotal.toStringAsFixed(2).replaceAll('.', ',')}',
-                        style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      
+
                       if (balancoTotal < 0) ...[
                         const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.amberAccent.shade700,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
                               const Expanded(
                                 child: Text(
                                   'Atenção: Saldo negativo! Deseja registrar uma nova entrada?',
-                                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               TextButton(
                                 onPressed: () => _abrirTelaEntrada(),
-                                child: const Text('ADICIONAR', style: TextStyle(color: Colors.white, decoration: TextDecoration.underline)),
+                                child: const Text(
+                                  'ADICIONAR',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ],
-                      
+
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -208,14 +258,17 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                             onTap: () => _abrirTelaEntrada(),
                           ),
                         ],
-                      )
+                      ),
                     ],
                   ),
                 ),
 
                 // 2. Barra de Seleção de Abas e Filtro de Período
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -229,12 +282,27 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                       DropdownButton<String>(
                         value: _periodoSelecionado,
                         underline: const SizedBox(),
-                        icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
-                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                        icon: const Icon(
+                          Icons.arrow_drop_down,
+                          color: Colors.black,
+                        ),
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
                         items: const [
-                          DropdownMenuItem(value: 'Diário', child: Text('Diário ')),
-                          DropdownMenuItem(value: 'Quinzenal', child: Text('Quinzenal ')),
-                          DropdownMenuItem(value: 'Mensal', child: Text('Mensal ')),
+                          DropdownMenuItem(
+                            value: 'Diário',
+                            child: Text('Diário '),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Quinzenal',
+                            child: Text('Quinzenal '),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Mensal',
+                            child: Text('Mensal '),
+                          ),
                         ],
                         onChanged: (novoValor) {
                           if (novoValor != null) {
@@ -256,7 +324,7 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                           itemBuilder: (context, index) {
                             final item = listaExibida[index];
                             final isGasto = _abaAtual == 'Gastos';
-                            
+
                             // 🟢 Mapeamento estrito usando as propriedades seguras da classe Gasto ou RegistroServico
                             String descricaoOriginal = '';
                             double valorItem = 0.0;
@@ -272,9 +340,16 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                               dataItem = item.data;
                             }
 
-                            final String titulo = isGasto ? (descricaoOriginal.split(' - ').first) : descricaoOriginal;
-                            final String subTitulo = isGasto ? (descricaoOriginal.contains(' - ') ? descricaoOriginal.split(' - ').last : '') : 'Serviço Concluído';
-                            final String dataFormatada = "${dataItem.day.toString().padLeft(2, '0')} ${_obterNomeMes(dataItem.month)}. ${dataItem.year}";
+                            final String titulo = isGasto
+                                ? (descricaoOriginal.split(' - ').first)
+                                : descricaoOriginal;
+                            final String subTitulo = isGasto
+                                ? (descricaoOriginal.contains(' - ')
+                                      ? descricaoOriginal.split(' - ').last
+                                      : '')
+                                : 'Serviço Concluído';
+                            final String dataFormatada =
+                                "${dataItem.day.toString().padLeft(2, '0')} ${_obterNomeMes(dataItem.month)}. ${dataItem.year}";
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -287,7 +362,7 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                                     color: Colors.black.withOpacity(0.03),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
-                                  )
+                                  ),
                                 ],
                               ),
                               child: Row(
@@ -300,20 +375,32 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Icon(
-                                      isGasto ? Icons.money_off : Icons.monetization_on, 
-                                      color: const Color(0xFF1E40AF)
+                                      isGasto
+                                          ? Icons.money_off
+                                          : Icons.monetization_on,
+                                      color: const Color(0xFF1E40AF),
                                     ),
                                   ),
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                        Text(
+                                          titulo,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                          ),
+                                        ),
                                         const SizedBox(height: 2),
                                         Text(
                                           subTitulo,
-                                          style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 13,
+                                          ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -326,15 +413,23 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
                                       Text(
                                         "${isGasto ? '- ' : '+ '}R\$ ${valorItem.toStringAsFixed(2).replaceAll('.', ',')}",
                                         style: TextStyle(
-                                          color: isGasto ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                                          color: isGasto
+                                              ? const Color(0xFFEF4444)
+                                              : const Color(0xFF10B981),
                                           fontWeight: FontWeight.bold,
                                           fontSize: 15,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(dataFormatada, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                                      Text(
+                                        dataFormatada,
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 11,
+                                        ),
+                                      ),
                                     ],
-                                  )
+                                  ),
                                 ],
                               ),
                             );
@@ -354,22 +449,36 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(isGasto ? Icons.account_balance_wallet_outlined : Icons.build_circle_outlined, size: 64, color: Colors.grey),
+            Icon(
+              isGasto
+                  ? Icons.account_balance_wallet_outlined
+                  : Icons.build_circle_outlined,
+              size: 64,
+              color: Colors.grey,
+            ),
             const SizedBox(height: 16),
             Text(
-              isGasto 
-                ? 'Nenhum registro de saída financeira encontrado para este período.' 
-                : 'Nenhum serviço realizado encontrado para este período.',
+              isGasto
+                  ? 'Nenhum registro de saída financeira encontrado para este período.'
+                  : 'Nenhum serviço realizado encontrado para este período.',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 15, color: Colors.black54),
             ),
             const SizedBox(height: 12),
             TextButton.icon(
               onPressed: isGasto ? _abrirTelaSaida : _abrirTelaEntrada,
-              icon: const Icon(Icons.add_circle_outline, color: Color(0xFF1E40AF)),
+              icon: const Icon(
+                Icons.add_circle_outline,
+                color: Color(0xFF1E40AF),
+              ),
               label: Text(
-                isGasto ? 'Deseja adicionar uma saída?' : 'Orientar e adicionar serviços realizados',
-                style: const TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+                isGasto
+                    ? 'Deseja adicionar uma saída?'
+                    : 'Orientar e adicionar serviços realizados',
+                style: const TextStyle(
+                  color: Color(0xFF1E40AF),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -393,7 +502,11 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
     );
   }
 
-  Widget _buildBotaoAtalho({required String label, required IconData icon, required VoidCallback onTap}) {
+  Widget _buildBotaoAtalho({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Row(
@@ -404,10 +517,16 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: const Color(0xFF1E40AF), size: 18), 
+            child: Icon(icon, color: const Color(0xFF1E40AF), size: 18),
           ),
           const SizedBox(width: 8),
-          Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
@@ -417,22 +536,37 @@ class _TelaRelatorioState extends State<TelaRelatorio> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TelaSaidaFinanceira(servicoController: widget.servicoController),
+        builder: (context) =>
+            TelaSaidaFinanceira(servicoController: widget.servicoController),
       ),
-    ).then((_) => _buscarDadosDoBanco()); 
+    ).then((_) => _buscarDadosDoBanco());
   }
 
   void _abrirTelaEntrada() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TelaServicos(servicoController: widget.servicoController),
+        builder: (context) =>
+            TelaServicos(servicoController: widget.servicoController),
       ),
-    ).then((_) => _buscarDadosDoBanco()); 
+    ).then((_) => _buscarDadosDoBanco());
   }
 
   String _obterNomeMes(int mes) {
-    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const meses = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
     return meses[mes - 1];
   }
 }

@@ -11,6 +11,7 @@ import 'package:projeto_integrador/view/servicos.dart';
 import 'package:projeto_integrador/view/relatorio_financeiro.dart'; 
 import 'package:projeto_integrador/view/historico_servicos.dart';
 import 'package:projeto_integrador/view/calendario.dart';
+import 'package:projeto_integrador/view/tela_fiscal.dart';
 
 class TelaPrincipal extends StatefulWidget {
   const TelaPrincipal({super.key});
@@ -200,7 +201,6 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                     icon: Icons.attach_money_outlined,
                     onTap: () => _navegar(context, TelaRelatorio(servicoController: _servicoCtrl, veiculoController: _veiculoCtrl)),
                   ),
-                  // 🟢 CORRIGIDO: Agora aponta perfeitamente para a nossa TelaHistorico atualizada com os dois controllers compartilhados
                   BotaoMenu(
                     label: 'Histórico',
                     icon: Icons.access_time_outlined,
@@ -211,6 +211,11 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                         veiculoController: _veiculoCtrl,
                       ),
                     ), 
+                  ),
+                  BotaoMenu(
+                    label: 'Fiscal',
+                    icon: Icons.receipt_long_outlined,
+                    onTap: () => _navegar(context, TelaFiscal(servicoController: _servicoCtrl)),
                   ),
                 ],
               ),
@@ -227,7 +232,6 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   }
 }
 
-// [Os componentes auxiliares BotaoMenu, DiaCalendario e CardDia permanecem os mesmos abaixo...]
 class BotaoMenu extends StatelessWidget {
   final String label;
   final IconData icon;

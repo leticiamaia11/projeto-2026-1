@@ -10,7 +10,7 @@ class ServicoController {
 
   // Listas fortemente tipadas como objetos (Perfeito para o Relatório)
   List<RegistroServico> historicoGlobal = [];
-  List<Gasto> listaDeGastos = []; 
+  List<Gasto> listaDeGastos = [];
 
   ServicoController({required this.veiculoController});
 
@@ -23,20 +23,19 @@ class ServicoController {
           .select()
           .order('data', ascending: false);
 
-      historicoGlobal = List<Map<String, dynamic>>.from(dadosServicos)
-          .map((mapa) => RegistroServico.fromMap(mapa)) 
-          .toList();
+      historicoGlobal = List<Map<String, dynamic>>.from(
+        dadosServicos,
+      ).map((mapa) => RegistroServico.fromMap(mapa)).toList();
 
       // 2. Busca todos os gastos apontando para a tabela 'gasto'
       final dadosGastos = await _supabase
-          .from('gasto') 
+          .from('gasto')
           .select()
           .order('data', ascending: false);
 
-      listaDeGastos = List<Map<String, dynamic>>.from(dadosGastos)
-          .map((mapa) => Gasto.fromMap(mapa))
-          .toList();
-
+      listaDeGastos = List<Map<String, dynamic>>.from(
+        dadosGastos,
+      ).map((mapa) => Gasto.fromMap(mapa)).toList();
     } catch (e) {
       debugPrint("Erro ao buscar dados do relatório: $e");
     }
@@ -59,7 +58,9 @@ class ServicoController {
           .maybeSingle();
 
       if (veiculoExistente == null) {
-        debugPrint("Erro: O veículo com a placa $placa não existe no Supabase.");
+        debugPrint(
+          "Erro: O veículo com a placa $placa não existe no Supabase.",
+        );
         return false;
       }
 
@@ -78,11 +79,10 @@ class ServicoController {
 
       // 3. Insere na tabela correta do banco ('registro_servicos')
       await _supabase.from('registro_servicos').insert(novoServico.toMap());
-      
+
       // Atualiza a lista local em memória
       historicoGlobal.insert(0, novoServico);
       return true;
-      
     } catch (e) {
       debugPrint("Erro ao registrar serviço no Supabase: $e");
       return false;
@@ -91,15 +91,15 @@ class ServicoController {
 
   Future<bool> adicionarGasto(Gasto gasto) async {
     try {
-      // Converte o objeto para Mapa. Como a tabela se chama 'gasto' e a 
+      // Converte o objeto para Mapa. Como a tabela se chama 'gasto' e a
       // coluna é 'data', o toMap() original do seu Gasto já encaixa perfeitamente!
       final mapaGasto = gasto.toMap();
 
       // Gravando na tabela correta informada na foto: 'gasto'
       await _supabase.from('gasto').insert(mapaGasto);
-      
+
       // Atualiza a lista local em memória inserindo o Objeto completo
-      listaDeGastos.add(gasto); 
+      listaDeGastos.add(gasto);
       return true;
     } catch (e) {
       debugPrint("Erro ao registrar saída financeira no Supabase: $e");
