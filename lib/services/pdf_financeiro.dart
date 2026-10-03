@@ -5,7 +5,7 @@ import 'package:printing/printing.dart';
 import '../models/gasto.dart';
 import '../models/registroServico.dart';
 
-class PdfService {
+class PdfServiceFinanceiro {
   /// Gera o relatório financeiro real em PDF e abre a janela nativa
   /// de visualização/impressão/compartilhamento do sistema.
   static Future<void> gerarRelatorioFinanceiro({

@@ -87,19 +87,20 @@ class FiscalController extends ChangeNotifier {
 
   /// Baixar novamente / Visualizar PDF da nota fiscal selecionada
   Future<void> baixarNotaFiscal(NotaFiscal nota) async {
-    await PdfService.gerarRelatorioFinanceiro(
+    await PdfService.gerarRelatorioFiscal(
       periodo: 'Comprovante Fiscal - ${nota.descricaoServico}',
-      gastos: [],
       servicos: [
         RegistroServico(
           id: nota.id ?? '',
           descricao: nota.descricaoServico,
           valor: nota.valorBruto,
           dataInformada: nota.dataEmissao,
+          
           placaVeiculo: 'N/A', 
           duracaoEmHoras: 0, 
         )
       ],
+      gastos: [],
       totalFaturado: nota.valorBruto,
       totalGastos: 0.0,
     );

@@ -7,6 +7,7 @@ import 'package:projeto_integrador/models/gasto.dart';
 class TelaSaidaFinanceira extends StatefulWidget {
   final ServicoController servicoController;
 
+  //ALTERADO
   const TelaSaidaFinanceira({super.key, required this.servicoController});
 
   @override
@@ -21,6 +22,8 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
   final _dataCtrl = TextEditingController();
   final _valorCtrl = TextEditingController();
 
+  // ALTERADO
+  String _statusSelecionado = 'Pago';
   DateTime? _dataSelecionada;
 
   @override
@@ -63,18 +66,16 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
 
   Future<void> _realizarRegistro() async {
     if (_formKey.currentState!.validate()) {
-      // Converte o texto substituindo a vírgula por ponto para o double.parse funcionar de forma segura
       final valorTratado =
           double.tryParse(_valorCtrl.text.replaceAll(',', '.')) ?? 0.0;
 
-      // Mantém a regra de negócio de unificar Título - Descrição
       final descricaoCompleta = "${_tituloCtrl.text} - ${_descricaoCtrl.text}";
 
-      // Utiliza o modelo Gasto mapeando para a propriedade que alimenta o banco
       final novoGasto = Gasto(
         descricao: descricaoCompleta,
         valor: valorTratado,
         dataInformada: _dataSelecionada ?? DateTime.now(),
+        status: _statusSelecionado,
       );
 
       showDialog(
@@ -85,6 +86,7 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
 
       bool sucesso = await widget.servicoController.adicionarGasto(novoGasto);
 
+      if (!mounted) return;
       Navigator.pop(context); // Remove o CircularProgressIndicator
 
       if (sucesso) {
@@ -94,7 +96,7 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context); // Retorna ao relatório atualizado
+        Navigator.pop(context); // Retorna ao relatório
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -106,7 +108,6 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
     }
   }
 
-  @override
   Widget build(BuildContext context) {
     final estiloBorda = OutlineInputBorder(
       borderRadius: BorderRadius.circular(30.0),
@@ -198,7 +199,6 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
                     estiloBorda,
                     controller: _valorCtrl,
                     hint: '0.00',
-                    // 🟢 CORRIGIDO: Filtro limpo nativo que aceita apenas números, pontos e vírgulas sem tamanho fixo
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                     ],
@@ -214,6 +214,43 @@ class _TelaSaidaFinanceiraState extends State<TelaSaidaFinanceira> {
                         return 'Digite um valor numérico válido';
                       }
                       return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ADICIONADO
+                  DropdownButtonFormField<String>(
+                    value: _statusSelecionado,
+                    decoration: InputDecoration(
+                      labelText: 'Status do Gasto',
+                      filled: true,
+                      fillColor: const Color(0xFFE5E7EB),
+                      border: estiloBorda,
+                      enabledBorder: estiloBorda,
+                      focusedBorder: estiloBorda.copyWith(
+                        borderSide: const BorderSide(
+                          color: Color(0xFF1E40AF),
+                          width: 1,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Pago', child: Text('Pago')),
+                      DropdownMenuItem(
+                        value: 'Pendente',
+                        child: Text('Pendente'),
+                      ),
+                    ],
+                    onChanged: (novoStatus) {
+                      if (novoStatus != null) {
+                        setState(() {
+                          _statusSelecionado = novoStatus;
+                        });
+                      }
                     },
                   ),
                   const SizedBox(height: 32),

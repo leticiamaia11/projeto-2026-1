@@ -236,9 +236,9 @@ class _ListaVeiculosState extends State<ListaVeiculos> {
 
                                   bool sucesso = await _veiculoCtrl
                                       .removerVeiculo(veiculo.placa);
-
-                                  if (mounted) {
+                                  {
                                     if (sucesso) {
+                                      if (!mounted) return;
                                       _carregarDadosDoBanco(); // Recarrega a lista do banco
                                       ScaffoldMessenger.of(
                                         context,

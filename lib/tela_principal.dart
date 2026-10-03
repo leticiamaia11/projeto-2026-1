@@ -1,17 +1,17 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:projeto_integrador/controllers/servico_controller.dart';
 import 'package:projeto_integrador/controllers/veículo_controller.dart';
-import 'package:projeto_integrador/controllers/usuario_controller.dart'; 
-import 'package:projeto_integrador/tela_login.dart'; 
+import 'package:projeto_integrador/controllers/usuario_controller.dart';
+import 'package:projeto_integrador/tela_login.dart';
 import 'package:projeto_integrador/view/lista_clientes.dart';
-import 'package:projeto_integrador/view/lista_veiulos.dart'; 
+import 'package:projeto_integrador/view/lista_veiulos.dart';
 import 'package:projeto_integrador/view/agendamento.dart';
 import 'package:projeto_integrador/view/servicos.dart';
-import 'package:projeto_integrador/view/relatorio_financeiro.dart'; 
+import 'package:projeto_integrador/view/relatorio_financeiro.dart';
 import 'package:projeto_integrador/view/historico_servicos.dart';
 import 'package:projeto_integrador/view/calendario.dart';
 import 'package:projeto_integrador/view/tela_fiscal.dart';
+import 'package:projeto_integrador/view/tela_dre.dart';
 
 class TelaPrincipal extends StatefulWidget {
   const TelaPrincipal({super.key});
@@ -22,55 +22,79 @@ class TelaPrincipal extends StatefulWidget {
 
 class _TelaPrincipalState extends State<TelaPrincipal> {
   final VeiculoController _veiculoCtrl = VeiculoController();
-  final UsuarioController _usuarioCtrl = UsuarioController(); 
+  final UsuarioController _usuarioCtrl = UsuarioController();
+
   late final ServicoController _servicoCtrl;
-  
-  int indiceSelecionado = 0; 
-  late List<DiaCalendario> listaDias; 
+
+  int indiceSelecionado = 0;
+  late List<DiaCalendario> listaDias;
 
   String _nomeUsuario = 'Carregando...';
 
   @override
   void initState() {
     super.initState();
-    _servicoCtrl = ServicoController(veiculoController: _veiculoCtrl);
+
+    _servicoCtrl = ServicoController(
+      veiculoController: _veiculoCtrl,
+    );
+
     listaDias = gerarDias();
+
     _carregarNomeDoUsuario();
   }
 
   Future<void> _carregarNomeDoUsuario() async {
-    String nome = await _usuarioCtrl.obterNomeUsuarioLogado();
+    final nome = await _usuarioCtrl.obterNomeUsuarioLogado();
+
     if (mounted) {
       setState(() {
-        _nomeUsuario = nome; 
+        _nomeUsuario = nome;
       });
     }
   }
 
   List<DiaCalendario> gerarDias() {
-    List<DiaCalendario> dias = [];
-    DateTime hoje = DateTime.now();
-    List<String> nomesDias = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
+    final List<DiaCalendario> dias = [];
+
+    final DateTime hoje = DateTime.now();
+
+    const List<String> nomesDias = [
+      'SEG',
+      'TER',
+      'QUA',
+      'QUI',
+      'SEX',
+      'SAB',
+      'DOM',
+    ];
 
     for (int i = 0; i < 7; i++) {
-      DateTime data = hoje.add(Duration(days: i)); 
+      final DateTime data = hoje.add(
+        Duration(days: i),
+      );
+
       dias.add(
         DiaCalendario(
           numero: data.day.toString(),
-          diaSemana: nomesDias[data.weekday - 1], 
+          diaSemana: nomesDias[data.weekday - 1],
           dataCompleta: data,
         ),
       );
     }
+
     return dias;
   }
 
   Future<void> _executarLogout() async {
-    bool deslogou = await _usuarioCtrl.deslogarUsuario();
+    final bool deslogou = await _usuarioCtrl.deslogarUsuario();
+
     if (deslogou && mounted) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const TelaLogin()),
+        MaterialPageRoute(
+          builder: (context) => const TelaLogin(),
+        ),
         (route) => false,
       );
     }
@@ -80,26 +104,48 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.logout, color: Color(0xFF1E40AF)),
+          icon: const Icon(
+            Icons.logout,
+            color: Color(0xFF1E40AF),
+          ),
           onPressed: _executarLogout,
         ),
+
         title: const Text(
           'Engetec - Soluções Automotivas',
-          style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF1E40AF),
+            fontWeight: FontWeight.bold,
+          ),
         ),
+
         actions: [
           Center(
-            child: Text(_nomeUsuario, style: const TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.w500)),
+            child: Text(
+              _nomeUsuario,
+              style: const TextStyle(
+                color: Color(0xFF1E40AF),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
+
           const SizedBox(width: 8),
+
           const CircleAvatar(
             backgroundColor: Colors.grey,
-            child: Icon(Icons.person, color: Colors.white),
+            child: Icon(
+              Icons.person,
+              color: Colors.white,
+            ),
           ),
+
           const SizedBox(width: 16),
         ],
+
         backgroundColor: Colors.white,
         elevation: 0,
       ),
@@ -108,22 +154,33 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
+            // ============================================================
+            // AGENDA
+            // ============================================================
+
             Container(
               height: 180,
               width: double.infinity,
+
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xFF0091FF), Color(0xFF6AB5E2)],
+                  colors: [
+                    Color(0xFF0091FF),
+                    Color(0xFF6AB5E2),
+                  ],
                 ),
               ),
+
               child: Column(
                 children: [
+
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 15),
                     child: Text(
-                      "Agenda",
+                      'Agenda',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -131,25 +188,37 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
                       ),
                     ),
                   ),
+
                   SizedBox(
                     height: 85,
+
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: listaDias.length,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                      ),
+
                       itemBuilder: (context, index) {
                         final dia = listaDias[index];
+
                         return GestureDetector(
                           onTap: () {
                             setState(() {
-                              indiceSelecionado = index; 
+                              indiceSelecionado = index;
                             });
-                            _navegar(context, const TelaCalendario());
+
+                            _navegar(
+                              context,
+                              const TelaCalendario(),
+                            );
                           },
+
                           child: CardDia(
                             numero: dia.numero,
                             diaSemana: dia.diaSemana,
-                            selecionado: indiceSelecionado == index, 
+                            selecionado:
+                                indiceSelecionado == index,
                           ),
                         );
                       },
@@ -159,67 +228,174 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
               ),
             ),
 
+            // ============================================================
+            // FUNCIONALIDADES
+            // ============================================================
+
             const Padding(
-              padding: EdgeInsets.all(20.0),
+              padding: EdgeInsets.all(20),
+
               child: Text(
                 'Funcionalidades',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
+
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E40AF),
+                ),
               ),
             ),
 
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+              ),
+
               child: GridView.count(
-                shrinkWrap: true, 
-                physics: const NeverScrollableScrollPhysics(), 
-                crossAxisCount: 3, 
-                crossAxisSpacing: 15, 
-                mainAxisSpacing: 15, 
+                shrinkWrap: true,
+
+                physics:
+                    const NeverScrollableScrollPhysics(),
+
+                crossAxisCount: 3,
+
+                crossAxisSpacing: 15,
+
+                mainAxisSpacing: 15,
+
                 children: [
+
+                  // ------------------------------------------------------
+                  // CLIENTES
+                  // ------------------------------------------------------
+
                   BotaoMenu(
                     label: 'Clientes',
                     icon: Icons.person_outline,
-                    onTap: () => _navegar(context, const ListaClientes()),
+
+                    onTap: () => _navegar(
+                      context,
+                      const ListaClientes(),
+                    ),
                   ),
+
+                  // ------------------------------------------------------
+                  // VEÍCULOS
+                  // ------------------------------------------------------
+
                   BotaoMenu(
                     label: 'Veículos',
                     icon: Icons.directions_car_filled_outlined,
-                    onTap: () => _navegar(context, const ListaVeiculos()), 
+
+                    onTap: () => _navegar(
+                      context,
+                      const ListaVeiculos(),
+                    ),
                   ),
+
+                  // ------------------------------------------------------
+                  // AGENDAR
+                  // ------------------------------------------------------
+
                   BotaoMenu(
                     label: 'Agendar',
                     icon: Icons.calendar_today_outlined,
-                    onTap: () => _navegar(context, const TelaAgendamento()),
+
+                    onTap: () => _navegar(
+                      context,
+                      const TelaAgendamento(),
+                    ),
                   ),
+
+                  // ------------------------------------------------------
+                  // SERVIÇOS
+                  // ------------------------------------------------------
+
                   BotaoMenu(
                     label: 'Serviços',
                     icon: Icons.build_outlined,
-                    onTap: () => _navegar(context, TelaServicos(servicoController: _servicoCtrl)),
+
+                    onTap: () => _navegar(
+                      context,
+                      TelaServicos(
+                        servicoController: _servicoCtrl,
+                      ),
+                    ),
                   ),
+
+                  // ------------------------------------------------------
+                  // FINANCEIRO
+                  // ------------------------------------------------------
+
                   BotaoMenu(
-                    label: 'Relatório',
+                    label: 'Financeiro',
                     icon: Icons.attach_money_outlined,
-                    onTap: () => _navegar(context, TelaRelatorio(servicoController: _servicoCtrl, veiculoController: _veiculoCtrl)),
+
+                    onTap: () => _navegar(
+                      context,
+
+                      TelaRelatorio(
+                        servicoController: _servicoCtrl,
+                        veiculoController: _veiculoCtrl,
+                      ),
+                    ),
                   ),
+
+                  // ------------------------------------------------------
+                  // DRE
+                  // ------------------------------------------------------
+
+                  BotaoMenu(
+                    label: 'Contábil',
+                    icon: Icons.analytics_outlined,
+
+                    onTap: () => _navegar(
+                      context,
+
+                      TelaDRE(
+                        servicoController: _servicoCtrl,
+                      ),
+                    ),
+                  ),
+
+                  // ------------------------------------------------------
+                  // HISTÓRICO
+                  // ------------------------------------------------------
+
                   BotaoMenu(
                     label: 'Histórico',
                     icon: Icons.access_time_outlined,
+
                     onTap: () => _navegar(
-                      context, 
+                      context,
+
                       TelaHistorico(
                         servicoController: _servicoCtrl,
                         veiculoController: _veiculoCtrl,
                       ),
-                    ), 
+                    ),
                   ),
+
+                  // ------------------------------------------------------
+                  // FISCAL
+                  // ------------------------------------------------------
+
                   BotaoMenu(
                     label: 'Fiscal',
                     icon: Icons.receipt_long_outlined,
-                    onTap: () => _navegar(context, TelaFiscal(servicoController: _servicoCtrl)),
+
+                    onTap: () => _navegar(
+                      context,
+
+                      TelaFiscal(
+                        servicoController: _servicoCtrl,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
+
             const SizedBox(height: 24),
           ],
         ),
@@ -227,10 +403,27 @@ class _TelaPrincipalState extends State<TelaPrincipal> {
     );
   }
 
-  void _navegar(BuildContext context, Widget tela) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => tela));
+  // ================================================================
+  // NAVEGAÇÃO
+  // ================================================================
+
+  void _navegar(
+    BuildContext context,
+    Widget tela,
+  ) {
+    Navigator.push(
+      context,
+
+      MaterialPageRoute(
+        builder: (context) => tela,
+      ),
+    );
   }
 }
+
+// ====================================================================
+// BOTÃO DO MENU
+// ====================================================================
 
 class BotaoMenu extends StatelessWidget {
   final String label;
@@ -248,18 +441,32 @@ class BotaoMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+
       child: Container(
         decoration: BoxDecoration(
           color: const Color(0xFF91B9D1),
-          borderRadius: BorderRadius.circular(20),
+
+          borderRadius:
+              BorderRadius.circular(20),
         ),
+
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment:
+              MainAxisAlignment.center,
+
           children: [
-            Icon(icon, size: 40, color: Colors.white), 
+
+            Icon(
+              icon,
+              size: 40,
+              color: Colors.white,
+            ),
+
             const SizedBox(height: 8),
+
             Text(
               label,
+
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w500,
@@ -273,6 +480,10 @@ class BotaoMenu extends StatelessWidget {
   }
 }
 
+// ====================================================================
+// MODELO DO DIA
+// ====================================================================
+
 class DiaCalendario {
   final String numero;
   final String diaSemana;
@@ -284,6 +495,10 @@ class DiaCalendario {
     required this.dataCompleta,
   });
 }
+
+// ====================================================================
+// CARD DO DIA
+// ====================================================================
 
 class CardDia extends StatelessWidget {
   final String diaSemana;
@@ -300,29 +515,54 @@ class CardDia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 5),
-      width: 60,
-      decoration: BoxDecoration(
-        color: selecionado ? Colors.white : Colors.transparent,
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.white, width: 1),
+      margin: const EdgeInsets.symmetric(
+        horizontal: 5,
       ),
+
+      width: 60,
+
+      decoration: BoxDecoration(
+        color: selecionado
+            ? Colors.white
+            : Colors.transparent,
+
+        borderRadius:
+            BorderRadius.circular(25),
+
+        border: Border.all(
+          color: Colors.white,
+          width: 1,
+        ),
+      ),
+
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment:
+            MainAxisAlignment.center,
+
         children: [
+
           Text(
             numero,
+
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: selecionado ? const Color(0xFF1E40AF) : Colors.white,
+
+              color: selecionado
+                  ? const Color(0xFF1E40AF)
+                  : Colors.white,
             ),
           ),
+
           Text(
             diaSemana,
+
             style: TextStyle(
               fontSize: 12,
-              color: selecionado ? const Color(0xFF1E40AF) : Colors.white,
+
+              color: selecionado
+                  ? const Color(0xFF1E40AF)
+                  : Colors.white,
             ),
           ),
         ],
@@ -330,3 +570,4 @@ class CardDia extends StatelessWidget {
     );
   }
 }
+
