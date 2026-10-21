@@ -4,6 +4,7 @@ import 'package:projeto_integrador/controllers/agendamento_controller.dart';
 import 'package:projeto_integrador/controllers/cliente_controller.dart';
 import 'package:projeto_integrador/controllers/veículo_controller.dart';
 import 'package:projeto_integrador/models/cliente.dart'; 
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 class TelaAgendamento extends StatefulWidget {
   const TelaAgendamento({super.key});
@@ -40,13 +41,23 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
     }
   }
 
+  
   void _showDatePicker() async {
+    final DateTime agora = DateTime.now();
+
     final DateTime? selectedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
+      initialDate: agora,
+      firstDate: DateTime(agora.year, agora.month, agora.day),
       lastDate: DateTime(2100),
+      locale: const Locale('pt', 'BR'),
+      helpText: 'Selecione a data',
+      cancelText: 'Cancelar',
+      confirmText: 'Confirmar',
+      fieldLabelText: 'Data',
+      fieldHintText: 'DD/MM/AAAA',
     );
+
     if (selectedDate != null) {
       setState(() {
         _controller.atualizarData(selectedDate);
@@ -55,17 +66,32 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
   }
 
   void _showInicioTimePicker() async {
-    TimeOfDay? horaSelecionada = await showTimePicker(
+    final TimeOfDay? horaSelecionada = await showTimePicker(
       context: context,
       initialTime: _controller.horaInicioReal ?? TimeOfDay.now(),
+      helpText: 'Selecione o horário de início',
+      cancelText: 'Cancelar',
+      confirmText: 'Confirmar',
+      builder: (context, child) {
+        return Localizations.override(
+          context: context,
+          locale: const Locale('pt', 'BR'),
+          child: child,
+        );
+      },
     );
+
     if (horaSelecionada != null) {
       setState(() {
-        bool limpouFim = _controller.atualizarHorarioInicio(horaSelecionada);
+        bool limpouFim =
+            _controller.atualizarHorarioInicio(horaSelecionada);
+
         if (limpouFim) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("O horário de início mudou. Selecione o fim novamente."),
+              content: Text(
+                'O horário de início mudou. Selecione o fim novamente.',
+              ),
             ),
           );
         }
@@ -76,28 +102,46 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
   void _showFimTimePicker() async {
     if (_controller.horaInicioReal == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Selecione o horário de início primeiro.")),
+        const SnackBar(
+          content: Text('Selecione o horário de início primeiro.'),
+        ),
       );
       return;
     }
-    TimeOfDay? horaSelecionada = await showTimePicker(
+
+    final TimeOfDay? horaSelecionada = await showTimePicker(
       context: context,
       initialTime: _controller.horaInicioReal!,
+      helpText: 'Selecione o horário de término',
+      cancelText: 'Cancelar',
+      confirmText: 'Confirmar',
+      builder: (context, child) {
+        return Localizations.override(
+          context: context,
+          locale: const Locale('pt', 'BR'),
+          child: child,
+        );
+      },
     );
+
     if (horaSelecionada != null) {
       setState(() {
         bool valido = _controller.atualizarHorarioFim(horaSelecionada);
+
         if (!valido) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               backgroundColor: Colors.redAccent,
-              content: Text('O horário de término deve ser após o horário de início!'),
+              content: Text(
+                'O horário de término deve ser após o horário de início!',
+              ),
             ),
           );
         }
       });
     }
   }
+
 
   void _validarEProcessarAgendamento() async {
     if (!_controller.formKey.currentState!.validate()) return;
@@ -170,7 +214,7 @@ class _TelaAgendamentoState extends State<TelaAgendamento> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Colors.green,
-          content: Text("Agendamento saved com sucesso no banco!"),
+          content: Text("Agendamento salvo com sucesso no banco!"),
         ),
       );
       Navigator.pop(context);

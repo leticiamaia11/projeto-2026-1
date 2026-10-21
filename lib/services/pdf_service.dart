@@ -19,7 +19,7 @@ class PdfService {
     String prestadorInscricaoMunicipal = '123456',
     String tomadorNome = 'Cliente / Tomador do Serviço',
     String tomadorCpfCnpj = '000.000.000-00',
-    double aliquotaIss = 5.0,
+    double aliquotaIss = 6.0,
   }) async {
     final pdf = pw.Document();
 

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+
 import 'package:projeto_integrador/controllers/servico_controller.dart';
 import 'package:projeto_integrador/models/registroServico.dart';
 import 'package:projeto_integrador/models/gasto.dart';
+
+import '../services/pdf_contabil.dart';
+import '../services/excel_contabil.dart';
 
 class TelaDRE extends StatefulWidget {
   final ServicoController servicoController;
@@ -21,14 +25,16 @@ class _TelaDREState extends State<TelaDRE> {
   @override
   void initState() {
     super.initState();
-
-    // Garante que os dados mais recentes sejam carregados
-    // quando a tela do DRE for aberta.
     _carregarDados();
   }
 
+  // ============================================================
+  // CARREGAR DADOS
+  // ============================================================
+
   Future<void> _carregarDados() async {
-    await widget.servicoController.buscarDadosParaRelatorio();
+    await widget.servicoController
+        .buscarDadosParaRelatorio();
 
     if (mounted) {
       setState(() {});
@@ -36,7 +42,7 @@ class _TelaDREState extends State<TelaDRE> {
   }
 
   // ============================================================
-  // FILTRA SERVIÇOS PELO PERÍODO
+  // SERVIÇOS DO PERÍODO
   // ============================================================
 
   List<RegistroServico> _servicosDoPeriodo() {
@@ -56,17 +62,9 @@ class _TelaDREState extends State<TelaDRE> {
         servico.data.day,
       );
 
-      // ----------------------------------------------------------
-      // DIÁRIO
-      // ----------------------------------------------------------
-
       if (_periodoSelecionado == 'Diário') {
         return data == inicioHoje;
       }
-
-      // ----------------------------------------------------------
-      // QUINZENAL
-      // ----------------------------------------------------------
 
       if (_periodoSelecionado == 'Quinzenal') {
         final inicio = inicioHoje.subtract(
@@ -77,17 +75,13 @@ class _TelaDREState extends State<TelaDRE> {
             !data.isAfter(inicioHoje);
       }
 
-      // ----------------------------------------------------------
-      // MENSAL
-      // ----------------------------------------------------------
-
       return data.year == agora.year &&
           data.month == agora.month;
     }).toList();
   }
 
   // ============================================================
-  // FILTRA GASTOS PELO PERÍODO
+  // GASTOS DO PERÍODO
   // ============================================================
 
   List<Gasto> _gastosDoPeriodo() {
@@ -134,7 +128,7 @@ class _TelaDREState extends State<TelaDRE> {
   }
 
   // ============================================================
-  // LINHA DO DRE
+  // LINHA DA DRE
   // ============================================================
 
   Widget _buildLinhaDRE({
@@ -160,7 +154,9 @@ class _TelaDREState extends State<TelaDRE> {
             ),
           ),
         ),
+
         const SizedBox(width: 12),
+
         Text(
           _dinheiro(valor),
           style: TextStyle(
@@ -175,50 +171,317 @@ class _TelaDREState extends State<TelaDRE> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Busca os dados de acordo com o período selecionado.
+  // ============================================================
+  // MENU DE EXPORTAÇÃO
+  // ============================================================
+
+  Future<void> _abrirMenuExportacao() async {
     final servicos = _servicosDoPeriodo();
     final gastos = _gastosDoPeriodo();
-
-    // ----------------------------------------------------------
-    // RECEITA BRUTA
-    // ----------------------------------------------------------
 
     final receitaBruta = servicos.fold<double>(
       0.0,
       (soma, servico) => soma + servico.valor,
     );
 
-    // ----------------------------------------------------------
-    // ISS
-    // ----------------------------------------------------------
-    //
-    // Mantemos a alíquota de 6% que já estava sendo utilizada
-    // no projeto.
-    //
-
     final impostos = receitaBruta * 0.06;
-
-    // ----------------------------------------------------------
-    // RECEITA LÍQUIDA
-    // ----------------------------------------------------------
 
     final receitaLiquida =
         receitaBruta - impostos;
-
-    // ----------------------------------------------------------
-    // DESPESAS
-    // ----------------------------------------------------------
 
     final despesas = gastos.fold<double>(
       0.0,
       (soma, gasto) => soma + gasto.valor,
     );
 
-    // ----------------------------------------------------------
+    final lucroLiquido =
+        receitaLiquida - despesas;
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(20),
+        ),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Exportar relatório contábil',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  'Período: $_periodoSelecionado',
+                  style: const TextStyle(
+                    color: Colors.black54,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // =================================================
+                // PDF
+                // =================================================
+
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius:
+                          BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.picture_as_pdf,
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+
+                  title: const Text(
+                    'Exportar para PDF',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  subtitle: const Text(
+                    'Relatório contábil completo',
+                  ),
+
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                  ),
+
+                  onTap: () {
+                    Navigator.pop(context);
+
+                    _exportarPDF(
+                      servicos: servicos,
+                      gastos: gastos,
+                      receitaBruta: receitaBruta,
+                      impostos: impostos,
+                      receitaLiquida: receitaLiquida,
+                      despesas: despesas,
+                      lucroLiquido: lucroLiquido,
+                    );
+                  },
+                ),
+
+                const Divider(),
+
+                // =================================================
+                // EXCEL
+                // =================================================
+
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius:
+                          BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.table_chart,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+
+                  title: const Text(
+                    'Exportar para Excel',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  subtitle: const Text(
+                    'Resumo, entradas e saídas',
+                  ),
+
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                  ),
+
+                  onTap: () {
+                    Navigator.pop(context);
+
+                    _exportarExcel(
+                      servicos: servicos,
+                      gastos: gastos,
+                      receitaBruta: receitaBruta,
+                      impostos: impostos,
+                      receitaLiquida: receitaLiquida,
+                      despesas: despesas,
+                      lucroLiquido: lucroLiquido,
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // EXPORTAR PDF
+  // ============================================================
+
+  Future<void> _exportarPDF({
+    required List<RegistroServico> servicos,
+    required List<Gasto> gastos,
+    required double receitaBruta,
+    required double impostos,
+    required double receitaLiquida,
+    required double despesas,
+    required double lucroLiquido,
+  }) async {
+    try {
+      await PdfContabil.gerarRelatorioContabil(
+        periodo: _periodoSelecionado,
+        servicos: servicos,
+        gastos: gastos,
+        receitaBruta: receitaBruta,
+        impostos: impostos,
+        receitaLiquida: receitaLiquida,
+        despesas: despesas,
+        lucroLiquido: lucroLiquido,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Relatório PDF gerado com sucesso!',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Erro ao gerar PDF: $e',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // EXPORTAR EXCEL
+  // ============================================================
+
+  Future<void> _exportarExcel({
+    required List<RegistroServico> servicos,
+    required List<Gasto> gastos,
+    required double receitaBruta,
+    required double impostos,
+    required double receitaLiquida,
+    required double despesas,
+    required double lucroLiquido,
+  }) async {
+    try {
+      await ExcelContabil.gerarRelatorioContabil(
+        periodo: _periodoSelecionado,
+        servicos: servicos,
+        gastos: gastos,
+        receitaBruta: receitaBruta,
+        impostos: impostos,
+        receitaLiquida: receitaLiquida,
+        despesas: despesas,
+        lucroLiquido: lucroLiquido,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Relatório Excel gerado com sucesso!',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Erro ao gerar Excel: $e',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
+
+  @override
+  Widget build(BuildContext context) {
+    final servicos = _servicosDoPeriodo();
+    final gastos = _gastosDoPeriodo();
+
+    // ==========================================================
+    // RECEITA BRUTA
+    // ==========================================================
+
+    final receitaBruta = servicos.fold<double>(
+      0.0,
+      (soma, servico) => soma + servico.valor,
+    );
+
+    // ==========================================================
+    // ISS
+    // ==========================================================
+
+    final impostos =
+        receitaBruta * 0.06;
+
+    // ==========================================================
+    // RECEITA LÍQUIDA
+    // ==========================================================
+
+    final receitaLiquida =
+        receitaBruta - impostos;
+
+    // ==========================================================
+    // DESPESAS
+    // ==========================================================
+
+    final despesas = gastos.fold<double>(
+      0.0,
+      (soma, gasto) => soma + gasto.valor,
+    );
+
+    // ==========================================================
     // LUCRO LÍQUIDO
-    // ----------------------------------------------------------
+    // ==========================================================
 
     final lucroLiquido =
         receitaLiquida - despesas;
@@ -231,7 +494,7 @@ class _TelaDREState extends State<TelaDRE> {
         centerTitle: true,
 
         title: const Text(
-          'DRE Simples',
+          'Módulo Contábil',
           style: TextStyle(
             color: Color(0xFF1E40AF),
             fontWeight: FontWeight.bold,
@@ -251,6 +514,22 @@ class _TelaDREState extends State<TelaDRE> {
           onPressed: () =>
               Navigator.pop(context),
         ),
+
+        // ========================================================
+        // BOTÃO DE DOWNLOAD
+        // ========================================================
+
+        actions: [
+          IconButton(
+            tooltip: 'Exportar relatório',
+            icon: const Icon(
+              Icons.download,
+              color: Color(0xFF1E40AF),
+            ),
+            onPressed:
+                _abrirMenuExportacao,
+          ),
+        ],
       ),
 
       body: RefreshIndicator(
@@ -269,7 +548,7 @@ class _TelaDREState extends State<TelaDRE> {
 
             children: [
               const Text(
-                'Demonstrativo do Resultado do Exercício',
+                'Módulo Contábil',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight:
@@ -283,7 +562,7 @@ class _TelaDREState extends State<TelaDRE> {
               const SizedBox(height: 16),
 
               // ==================================================
-              // FILTRO DE PERÍODO
+              // FILTRO
               // ==================================================
 
               Container(
@@ -344,7 +623,7 @@ class _TelaDREState extends State<TelaDRE> {
               const SizedBox(height: 20),
 
               // ==================================================
-              // CARD PRINCIPAL
+              // CARD DRE
               // ==================================================
 
               Card(
@@ -480,6 +759,49 @@ class _TelaDREState extends State<TelaDRE> {
                       ),
                     ),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ==================================================
+              // BOTÃO VISUAL DE EXPORTAÇÃO
+              // ==================================================
+
+              OutlinedButton.icon(
+                onPressed:
+                    _abrirMenuExportacao,
+
+                icon: const Icon(
+                  Icons.download,
+                  color: Color(0xFF1E40AF),
+                ),
+
+                label: const Text(
+                  'Exportar relatório',
+                  style: TextStyle(
+                    color: Color(0xFF1E40AF),
+                    fontWeight:
+                        FontWeight.w600,
+                  ),
+                ),
+
+                style:
+                    OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(
+                    vertical: 14,
+                  ),
+
+                  side: const BorderSide(
+                    color: Color(0xFF1E40AF),
+                  ),
+
+                  shape:
+                      RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
